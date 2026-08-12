@@ -1,263 +1,538 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
+<!doctype html>
+<html lang="zh-Hant">
+
 <head>
+
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <meta name="theme-color" content="#2563eb">
+    <title>Yao｜消防工程行政管理</title>
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 
-    <title>YAO 消防工程管理系統</title>
-
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
 </head>
+
 
 <body>
 
-    <!-- 手機頂部 -->
-    <header class="mobile-header">
-        <button id="menuBtn" class="menu-btn">☰</button>
 
-        <div class="mobile-title">
-            YAO 消防管理
+<!-- =========================
+     左側選單
+========================= -->
+
+<aside class="sidebar">
+
+    <div class="brand">
+
+        <div class="logo">
+            🌪️
         </div>
 
-        <button id="addMobileBtn" class="mobile-add-btn">＋</button>
-    </header>
-
-
-    <!-- 左側選單 -->
-    <aside id="sidebar" class="sidebar">
-
-        <div class="logo-area">
-            <div class="logo-icon">Y</div>
-
-            <div>
-                <div class="logo-title">YAO</div>
-                <div class="logo-subtitle">消防工程管理</div>
-            </div>
-        </div>
-
-        <nav class="nav">
-
-            <button class="nav-item active" data-page="dashboard">
-                <span>📊</span>
-                <span>儀表板</span>
-            </button>
-
-            <button class="nav-item" data-page="projects">
-                <span>🏗️</span>
-                <span>工程案件</span>
-            </button>
-
-            <button class="nav-item" data-page="tasks">
-                <span>📋</span>
-                <span>工作事項</span>
-            </button>
-
-            <button class="nav-item" data-page="reminders">
-                <span>🔔</span>
-                <span>提醒事項</span>
-            </button>
-
-            <button class="nav-item" data-page="notes">
-                <span>📝</span>
-                <span>備忘錄</span>
-            </button>
-
-        </nav>
-
-    </aside>
-
-
-    <!-- 遮罩 -->
-    <div id="overlay" class="overlay"></div>
-
-
-    <!-- 主內容 -->
-    <main class="main">
-
-        <div class="topbar">
-
-            <div>
-                <h1 id="pageTitle">儀表板</h1>
-                <p id="pageSubtitle">消防工程管理總覽</p>
-            </div>
-
-            <button id="addBtn" class="primary-btn">
-                ＋ 新增
-            </button>
-
-        </div>
-
-
-        <!-- 儀表板 -->
-        <section id="dashboard" class="page active">
-
-            <div class="stats">
-
-                <div class="stat-card">
-                    <div class="stat-icon blue">🏗️</div>
-                    <div>
-                        <div class="stat-label">工程案件</div>
-                        <div id="projectCount" class="stat-number">0</div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon orange">📋</div>
-                    <div>
-                        <div class="stat-label">待辦事項</div>
-                        <div id="taskCount" class="stat-number">0</div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon red">🔔</div>
-                    <div>
-                        <div class="stat-label">提醒</div>
-                        <div id="reminderCount" class="stat-number">0</div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon green">📝</div>
-                    <div>
-                        <div class="stat-label">備忘錄</div>
-                        <div id="noteCount" class="stat-number">0</div>
-                    </div>
-                </div>
-
-            </div>
-
-
-            <div class="content-card">
-
-                <div class="card-header">
-                    <h2>最近工程</h2>
-
-                    <button class="text-btn" data-page-target="projects">
-                        查看全部
-                    </button>
-                </div>
-
-                <div id="recentProjects" class="empty-state">
-                    <div class="empty-icon">🏗️</div>
-                    <h3>目前還沒有工程</h3>
-                    <p>按右上角「新增」建立第一個工程案件</p>
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- 工程案件 -->
-        <section id="projects" class="page">
-
-            <div class="section-header">
-                <div>
-                    <h2>工程案件</h2>
-                    <p>管理消防工程案件</p>
-                </div>
-
-                <button class="primary-btn" id="addProjectBtn">
-                    ＋ 新增工程
-                </button>
-            </div>
-
-            <div id="projectList" class="card-grid"></div>
-
-        </section>
-
-
-        <!-- 工作事項 -->
-        <section id="tasks" class="page">
-
-            <div class="section-header">
-                <div>
-                    <h2>工作事項</h2>
-                    <p>記錄每天需要處理的工作</p>
-                </div>
-
-                <button class="primary-btn" id="addTaskBtn">
-                    ＋ 新增事項
-                </button>
-            </div>
-
-            <div id="taskList" class="list-card"></div>
-
-        </section>
-
-
-        <!-- 提醒 -->
-        <section id="reminders" class="page">
-
-            <div class="section-header">
-                <div>
-                    <h2>提醒事項</h2>
-                    <p>重要工作與時間提醒</p>
-                </div>
-
-                <button class="primary-btn" id="addReminderBtn">
-                    ＋ 新增提醒
-                </button>
-            </div>
-
-            <div id="reminderList" class="list-card"></div>
-
-        </section>
-
-
-        <!-- 備忘錄 -->
-        <section id="notes" class="page">
-
-            <div class="section-header">
-                <div>
-                    <h2>備忘錄</h2>
-                    <p>快速記錄現場資訊</p>
-                </div>
-
-                <button class="primary-btn" id="addNoteBtn">
-                    ＋ 新增備忘
-                </button>
-            </div>
-
-            <div id="noteList" class="card-grid"></div>
-
-        </section>
-
-    </main>
-
-
-    <!-- 新增視窗 -->
-    <div id="modal" class="modal">
-
-        <div class="modal-box">
-
-            <div class="modal-header">
-
-                <h2 id="modalTitle">新增資料</h2>
-
-                <button id="closeModal" class="close-btn">
-                    ×
-                </button>
-
-            </div>
-
-            <div id="modalBody"></div>
+        <div>
+
+            <strong>
+                Yao
+            </strong>
+
+            <span>
+                消防工程行政管理
+            </span>
 
         </div>
 
     </div>
 
 
-    <script src="app.js"></script>
+    <nav id="nav">
+
+        <button
+            class="nav-item active"
+            data-page="dashboard"
+        >
+            🏠 儀表板
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="calendar"
+        >
+            📅 行事曆
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="projects"
+        >
+            🏗️ 案場
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="logistics"
+        >
+            📦 進料 / 出貨
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="people"
+        >
+            👷 人員安排
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="inspection"
+        >
+            🔍 查驗
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="records"
+        >
+            📝 工作紀錄
+        </button>
+
+    </nav>
+
+
+    <div class="sidebar-bottom">
+
+        <button
+            class="quick-add"
+            id="quickAddBtn"
+        >
+            ＋ 快速新增
+        </button>
+
+        <small>
+            Yao V3
+        </small>
+
+    </div>
+
+</aside>
+
+
+
+<!-- =========================
+     主畫面
+========================= -->
+
+<main class="main">
+
+
+    <header class="topbar">
+
+        <div>
+
+            <div class="eyebrow">
+                消防工程行政
+            </div>
+
+            <h1 id="pageTitle">
+                儀表板
+            </h1>
+
+        </div>
+
+
+        <div class="top-actions">
+
+            <input
+                id="searchInput"
+                class="search"
+                placeholder="搜尋案場、工作、備註…"
+            >
+
+
+            <button
+                class="btn primary"
+                id="headerAddBtn"
+            >
+                ＋ 新增
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <section id="app"></section>
+
+</main>
+
+
+
+<!-- =========================
+     工作新增 / 編輯
+========================= -->
+
+<div
+    class="modal-backdrop hidden"
+    id="itemModal"
+>
+
+    <div class="modal">
+
+        <div class="modal-head">
+
+            <h2 id="itemModalTitle">
+                新增資料
+            </h2>
+
+
+            <button
+                class="icon-btn"
+                id="closeItemModal"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="itemForm">
+
+
+            <label>
+
+                類型
+
+                <select id="itemType">
+
+                    <option value="工作">
+                        工作
+                    </option>
+
+                    <option value="進料">
+                        進料
+                    </option>
+
+                    <option value="出貨">
+                        出貨
+                    </option>
+
+                    <option value="人員">
+                        人員安排
+                    </option>
+
+                    <option value="查驗">
+                        查驗
+                    </option>
+
+                    <option value="紀錄">
+                        工作紀錄
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!--
+                注意：
+
+                這裡不再讓使用者自由輸入案場
+            -->
+
+            <label>
+
+                案場
+
+                <select
+                    id="itemProject"
+                    required
+                >
+
+                </select>
+
+            </label>
+
+
+            <div
+                class="form-hint"
+                id="projectHint"
+            >
+                請先建立案場
+            </div>
+
+
+
+            <div class="form-grid">
+
+
+                <label>
+
+                    日期
+
+                    <input
+                        id="itemDate"
+                        type="date"
+                        required
+                    >
+
+                </label>
+
+
+                <label>
+
+                    時間
+
+                    <input
+                        id="itemTime"
+                        type="time"
+                    >
+
+                </label>
+
+
+            </div>
+
+
+
+            <label>
+
+                標題 / 工作內容
+
+                <input
+                    id="itemTitle"
+                    required
+                    placeholder="例如：消防箱 20 組進公司"
+                >
+
+            </label>
+
+
+
+            <label>
+
+                備註
+
+                <textarea
+                    id="itemNote"
+                    rows="4"
+                    placeholder="人員、數量、車輛、聯絡事項…"
+                ></textarea>
+
+            </label>
+
+
+
+            <label>
+
+                提醒
+
+                <select id="itemReminder">
+
+                    <option value="none">
+                        不提醒
+                    </option>
+
+                    <option value="1">
+                        提前 1 天
+                    </option>
+
+                    <option value="3">
+                        提前 3 天
+                    </option>
+
+                    <option value="7">
+                        提前 7 天
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="btn"
+                    id="cancelItemModal"
+                >
+                    取消
+                </button>
+
+
+                <button
+                    type="submit"
+                    class="btn primary"
+                    id="saveItemBtn"
+                >
+                    儲存
+                </button>
+
+            </div>
+
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================
+     案場新增 / 編輯
+========================= -->
+
+<div
+    class="modal-backdrop hidden"
+    id="projectModal"
+>
+
+    <div class="modal">
+
+        <div class="modal-head">
+
+            <h2 id="projectModalTitle">
+                新增案場
+            </h2>
+
+
+            <button
+                class="icon-btn"
+                id="closeProjectModal"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="projectForm">
+
+
+            <label>
+
+                案場名稱
+
+                <input
+                    id="projectName"
+                    required
+                    placeholder="例如：台中○○大樓"
+                >
+
+            </label>
+
+
+
+            <label>
+
+                地址
+
+                <input
+                    id="projectAddress"
+                    placeholder="例如：台中市太平區○○路"
+                >
+
+            </label>
+
+
+
+            <div class="form-grid">
+
+
+                <label>
+
+                    聯絡人
+
+                    <input
+                        id="projectContact"
+                        placeholder="例如：王先生"
+                    >
+
+                </label>
+
+
+                <label>
+
+                    聯絡電話
+
+                    <input
+                        id="projectPhone"
+                        placeholder="例如：0912-345-678"
+                    >
+
+                </label>
+
+
+            </div>
+
+
+
+            <label>
+
+                備註
+
+                <textarea
+                    id="projectNote"
+                    rows="4"
+                    placeholder="例如：大包、工地主任、進場注意事項…"
+                ></textarea>
+
+            </label>
+
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="btn"
+                    id="cancelProjectModal"
+                >
+                    取消
+                </button>
+
+
+                <button
+                    type="submit"
+                    class="btn primary"
+                >
+                    儲存案場
+                </button>
+
+            </div>
+
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<div
+    class="toast"
+    id="toast"
+></div>
+
+
+
+<script src="app.js"></script>
 
 </body>
+
 </html>

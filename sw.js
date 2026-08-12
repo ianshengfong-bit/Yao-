@@ -11,7 +11,7 @@ const FILES_TO_CACHE = [
 
 
 /* =========================
-   安裝
+   安裝新版 Service Worker
 ========================= */
 
 self.addEventListener("install", event => {
@@ -28,7 +28,8 @@ self.addEventListener("install", event => {
 
 
 /* =========================
-   啟用
+   啟用新版
+   清除舊快取
 ========================= */
 
 self.addEventListener("activate", event => {
@@ -55,8 +56,8 @@ self.addEventListener("activate", event => {
 
 
 /* =========================
-   讀取
    網路優先
+   網路成功就使用最新版本
 ========================= */
 
 self.addEventListener("fetch", event => {
@@ -64,15 +65,17 @@ self.addEventListener("fetch", event => {
     event.respondWith(
 
         fetch(event.request)
-
             .then(response => {
 
                 /*
                  * 網路成功
-                 * 使用最新檔案
+                 * 直接使用最新檔案
                  */
 
-                if (response && response.status === 200) {
+                if (
+                    response &&
+                    response.status === 200
+                ) {
 
                     const responseClone = response.clone();
 
@@ -95,7 +98,7 @@ self.addEventListener("fetch", event => {
             .catch(() => {
 
                 /*
-                 * 沒網路時
+                 * 網路失敗
                  * 才使用快取
                  */
 

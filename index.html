@@ -10,11 +10,26 @@
         content="width=device-width, initial-scale=1.0"
     >
 
+    <meta
+        name="theme-color"
+        content="#111827"
+    >
+
+    <meta
+        name="description"
+        content="Yao 消防工程行政管理系統"
+    >
+
     <title>Yao｜消防工程行政管理</title>
 
     <link
         rel="stylesheet"
-        href="style.css"
+        href="./style.css"
+    >
+
+    <link
+        rel="manifest"
+        href="./manifest.json"
     >
 
 </head>
@@ -23,173 +38,318 @@
 <body>
 
 
-<!-- =========================
-     左側選單
-========================= -->
+<!-- =====================================================
+     Firebase 登入
+===================================================== -->
 
-<aside class="sidebar">
+<div
+    id="loginScreen"
+    class="login-screen"
+>
 
-    <div class="brand">
+    <div class="login-card">
 
-        <div class="logo">
+
+        <div class="login-logo">
             🌪️
         </div>
 
-        <div>
 
-            <strong>
-                Yao
-            </strong>
-
-            <span>
-                消防工程行政管理
-            </span>
-
-        </div>
-
-    </div>
+        <h1>
+            Yao
+        </h1>
 
 
-    <nav id="nav">
-
-        <button
-            class="nav-item active"
-            data-page="dashboard"
-        >
-            🏠 儀表板
-        </button>
+        <p class="login-subtitle">
+            消防工程行政管理
+        </p>
 
 
-        <button
-            class="nav-item"
-            data-page="calendar"
-        >
-            📅 行事曆
-        </button>
+        <form id="loginForm">
 
 
-        <button
-            class="nav-item"
-            data-page="projects"
-        >
-            🏗️ 案場
-        </button>
+            <label>
+
+                Email
+
+                <input
+                    id="loginEmail"
+                    type="email"
+                    placeholder="輸入 Email"
+                    required
+                    autocomplete="email"
+                >
+
+            </label>
 
 
-        <button
-            class="nav-item"
-            data-page="logistics"
-        >
-            📦 進料 / 出貨
-        </button>
+            <label>
 
+                密碼
 
-        <button
-            class="nav-item"
-            data-page="people"
-        >
-            👷 人員安排
-        </button>
+                <input
+                    id="loginPassword"
+                    type="password"
+                    placeholder="輸入密碼"
+                    required
+                    autocomplete="current-password"
+                >
 
-
-        <button
-            class="nav-item"
-            data-page="inspection"
-        >
-            🔍 查驗
-        </button>
-
-
-        <button
-            class="nav-item"
-            data-page="records"
-        >
-            📝 工作紀錄
-        </button>
-
-    </nav>
-
-
-    <div class="sidebar-bottom">
-
-        <button
-            class="quick-add"
-            id="quickAddBtn"
-        >
-            ＋ 快速新增
-        </button>
-
-
-        <small>
-            Yao V3
-        </small>
-
-    </div>
-
-</aside>
-
-
-
-<!-- =========================
-     主畫面
-========================= -->
-
-<main class="main">
-
-    <header class="topbar">
-
-        <div>
-
-            <div class="eyebrow">
-                消防工程行政
-            </div>
-
-            <h1 id="pageTitle">
-                儀表板
-            </h1>
-
-        </div>
-
-
-        <div class="top-actions">
-
-            <input
-                id="searchInput"
-                class="search"
-                placeholder="搜尋案場、工作、備註…"
-            >
+            </label>
 
 
             <button
-                class="btn primary"
-                id="headerAddBtn"
+                type="submit"
+                class="btn primary login-btn"
+                id="loginBtn"
             >
-                ＋ 新增
+                登入系統
             </button>
+
+
+            <div
+                id="loginError"
+                class="login-error"
+            ></div>
+
+
+        </form>
+
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     Yao 系統
+===================================================== -->
+
+<div
+    id="system"
+    class="hidden"
+>
+
+
+    <!-- =================================================
+         左側選單
+    ================================================== -->
+
+    <aside class="sidebar">
+
+
+        <div class="brand">
+
+
+            <div class="logo">
+                🌪️
+            </div>
+
+
+            <div>
+
+                <strong>
+                    Yao
+                </strong>
+
+                <span>
+                    消防工程行政管理
+                </span>
+
+            </div>
+
 
         </div>
 
-    </header>
+
+        <!-- =============================
+             導覽
+        ============================== -->
+
+        <nav id="nav">
 
 
-    <section id="app"></section>
+            <button
+                class="nav-item active"
+                data-page="dashboard"
+            >
+                🏠 儀表板
+            </button>
 
-</main>
+
+            <button
+                class="nav-item"
+                data-page="calendar"
+            >
+                📅 行事曆
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="projects"
+            >
+                🏗️ 案場
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="logistics"
+            >
+                📦 進料 / 出貨
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="people"
+            >
+                👷 人員安排
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="inspection"
+            >
+                🔍 查驗
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="records"
+            >
+                📝 工作紀錄
+            </button>
+
+
+        </nav>
+
+
+        <!-- =============================
+             左下功能
+        ============================== -->
+
+        <div class="sidebar-bottom">
+
+
+            <button
+                class="quick-add"
+                id="quickAddBtn"
+            >
+                ＋ 快速新增
+            </button>
+
+
+            <button
+                class="logout-btn"
+                id="logoutBtn"
+            >
+                🚪 登出
+            </button>
+
+
+            <small>
+                Yao · Firebase
+            </small>
+
+
+        </div>
+
+
+    </aside>
 
 
 
-<!-- =========================
-     工作新增 / 編輯
-========================= -->
+    <!-- =================================================
+         主畫面
+    ================================================== -->
+
+    <main class="main">
+
+
+        <!-- =============================
+             頂部
+        ============================== -->
+
+        <header class="topbar">
+
+
+            <div>
+
+
+                <div class="eyebrow">
+                    消防工程行政
+                </div>
+
+
+                <h1 id="pageTitle">
+                    儀表板
+                </h1>
+
+
+            </div>
+
+
+            <div class="top-actions">
+
+
+                <input
+                    id="searchInput"
+                    class="search"
+                    type="search"
+                    placeholder="搜尋案場、工作、備註…"
+                    autocomplete="off"
+                >
+
+
+                <button
+                    class="btn primary"
+                    id="headerAddBtn"
+                >
+                    ＋ 新增
+                </button>
+
+
+            </div>
+
+
+        </header>
+
+
+
+        <!-- =============================
+             系統內容
+        ============================== -->
+
+        <section id="app"></section>
+
+
+    </main>
+
+
+</div>
+
+
+
+<!-- =====================================================
+     工作新增 / 編輯 Modal
+===================================================== -->
 
 <div
     class="modal-backdrop hidden"
     id="itemModal"
 >
 
+
     <div class="modal">
 
+
         <div class="modal-head">
+
 
             <h2 id="itemModalTitle">
                 新增資料
@@ -197,17 +357,23 @@
 
 
             <button
+                type="button"
                 class="icon-btn"
                 id="closeItemModal"
+                aria-label="關閉"
             >
                 ×
             </button>
 
+
         </div>
+
 
 
         <form id="itemForm">
 
+
+            <!-- 類型 -->
 
             <label>
 
@@ -215,29 +381,36 @@
 
                 <select id="itemType">
 
+
                     <option value="工作">
                         工作
                     </option>
+
 
                     <option value="進料">
                         進料
                     </option>
 
+
                     <option value="出貨">
                         出貨
                     </option>
+
 
                     <option value="人員">
                         人員安排
                     </option>
 
+
                     <option value="查驗">
                         查驗
                     </option>
 
+
                     <option value="紀錄">
                         工作紀錄
                     </option>
+
 
                 </select>
 
@@ -245,11 +418,7 @@
 
 
 
-            <!--
-                注意：
-
-                這裡不再讓使用者自由輸入案場
-            -->
+            <!-- 案場 -->
 
             <label>
 
@@ -259,6 +428,10 @@
                     id="itemProject"
                     required
                 >
+
+                    <option value="">
+                        請選擇案場
+                    </option>
 
                 </select>
 
@@ -273,6 +446,8 @@
             </div>
 
 
+
+            <!-- 日期 / 時間 -->
 
             <div class="form-grid">
 
@@ -301,9 +476,12 @@
 
                 </label>
 
+
             </div>
 
 
+
+            <!-- 標題 -->
 
             <label>
 
@@ -319,6 +497,8 @@
 
 
 
+            <!-- 備註 -->
+
             <label>
 
                 備註
@@ -333,27 +513,34 @@
 
 
 
+            <!-- 提醒 -->
+
             <label>
 
                 提醒
 
                 <select id="itemReminder">
 
+
                     <option value="none">
                         不提醒
                     </option>
+
 
                     <option value="1">
                         提前 1 天
                     </option>
 
+
                     <option value="3">
                         提前 3 天
                     </option>
 
+
                     <option value="7">
                         提前 7 天
                     </option>
+
 
                 </select>
 
@@ -361,7 +548,10 @@
 
 
 
+            <!-- 按鈕 -->
+
             <div class="modal-actions">
+
 
                 <button
                     type="button"
@@ -380,10 +570,12 @@
                     儲存
                 </button>
 
+
             </div>
 
 
         </form>
+
 
     </div>
 
@@ -391,18 +583,21 @@
 
 
 
-<!-- =========================
-     案場新增 / 編輯
-========================= -->
+<!-- =====================================================
+     案場新增 / 編輯 Modal
+===================================================== -->
 
 <div
     class="modal-backdrop hidden"
     id="projectModal"
 >
 
+
     <div class="modal">
 
+
         <div class="modal-head">
+
 
             <h2 id="projectModalTitle">
                 新增案場
@@ -410,17 +605,23 @@
 
 
             <button
+                type="button"
                 class="icon-btn"
                 id="closeProjectModal"
+                aria-label="關閉"
             >
                 ×
             </button>
 
+
         </div>
+
 
 
         <form id="projectForm">
 
+
+            <!-- 案場名稱 -->
 
             <label>
 
@@ -436,6 +637,8 @@
 
 
 
+            <!-- 地址 -->
+
             <label>
 
                 地址
@@ -448,6 +651,8 @@
             </label>
 
 
+
+            <!-- 聯絡人 / 電話 -->
 
             <div class="form-grid">
 
@@ -470,14 +675,18 @@
 
                     <input
                         id="projectPhone"
+                        type="tel"
                         placeholder="例如：0912-345-678"
                     >
 
                 </label>
 
+
             </div>
 
 
+
+            <!-- 備註 -->
 
             <label>
 
@@ -493,7 +702,10 @@
 
 
 
+            <!-- 按鈕 -->
+
             <div class="modal-actions">
+
 
                 <button
                     type="button"
@@ -511,10 +723,12 @@
                     儲存案場
                 </button>
 
+
             </div>
 
 
         </form>
+
 
     </div>
 
@@ -522,86 +736,119 @@
 
 
 
+<!-- =====================================================
+     Toast
+===================================================== -->
+
 <div
     class="toast"
     id="toast"
+    role="status"
+    aria-live="polite"
 ></div>
 
 
 
-<!-- =========================
-     原本程式
-========================= -->
+<!-- =====================================================
+     Firebase / Yao
+===================================================== -->
 
-<script src="app.js"></script>
+<script
+    type="module"
+    src="./app.js"
+></script>
 
 
 
-<!-- =========================
-     Service Worker
-     自動更新
-========================= -->
+<!-- =====================================================
+     Service Worker / PWA
+===================================================== -->
 
 <script>
 
 if ("serviceWorker" in navigator) {
 
-    window.addEventListener("load", () => {
 
-        navigator.serviceWorker
-            .register("./sw.js")
-            .then(registration => {
+    window.addEventListener(
+        "load",
+        () => {
 
-                console.log(
-                    "Yao Service Worker 已啟用"
+
+            navigator.serviceWorker
+                .register("./service-worker.js")
+
+
+                .then(
+                    registration => {
+
+
+                        console.log(
+                            "Yao Service Worker 已啟用"
+                        );
+
+
+                        /*
+                         * 每 60 秒檢查一次新版
+                         */
+
+                        setInterval(
+                            () => {
+
+                                registration.update();
+
+                            },
+                            60000
+                        );
+
+
+                    }
+                )
+
+
+                .catch(
+                    error => {
+
+                        console.error(
+                            "Service Worker 啟用失敗:",
+                            error
+                        );
+
+                    }
                 );
 
 
-                /*
-                 * 每 60 秒檢查一次新版
-                 */
+        }
+    );
 
-                setInterval(() => {
-
-                    registration.update();
-
-                }, 60000);
-
-            })
-            .catch(error => {
-
-                console.error(
-                    "Service Worker 啟用失敗:",
-                    error
-                );
-
-            });
-
-    });
 
 
     /*
-     * 偵測新版 Service Worker
+     * Service Worker 更新完成
+     * 自動重新整理頁面
      */
 
     navigator.serviceWorker.addEventListener(
         "controllerchange",
         () => {
 
-            /*
-             * 防止無限重新整理
-             */
 
-            if (!window.__YAO_RELOADED__) {
+            if (
+                !window.__YAO_RELOADED__
+            ) {
 
-                window.__YAO_RELOADED__ = true;
+
+                window.__YAO_RELOADED__ =
+                    true;
+
 
                 window.location.reload();
+
 
             }
 
         }
     );
+
 
 }
 

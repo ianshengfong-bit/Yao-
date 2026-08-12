@@ -1,52 +1,127 @@
 /* =========================================
-   YAO V3
+   YAO V4
+   Firebase 雲端版
    消防工程行政管理
 ========================================= */
 
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
-const ITEM_KEY =
-    "yao_items_v3";
+import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    signOut
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-
-const PROJECT_KEY =
-    "yao_projects_v3";
-
-
-let items =
-    JSON.parse(
-        localStorage.getItem(ITEM_KEY) || "[]"
-    );
-
-
-let projects =
-    JSON.parse(
-        localStorage.getItem(PROJECT_KEY) || "[]"
-    );
-
-
-let currentPage =
-    "dashboard";
+import {
+    getFirestore,
+    collection,
+    doc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 
-let editingItemId =
-    null;
+/* =========================================
+   Firebase 設定
+========================================= */
+
+const firebaseConfig = {
+
+    apiKey:
+        "AIzaSyDIHHzGpIkuMUvyq5yBrDrb_kvJTAM2QJo",
+
+    authDomain:
+        "yao-fire.firebaseapp.com",
+
+    projectId:
+        "yao-fire",
+
+    storageBucket:
+        "yao-fire.firebasestorage.app",
+
+    messagingSenderId:
+        "981464789073",
+
+    appId:
+        "1:981464789073:web:9188a540a3253cd4fd4870"
+
+};
 
 
-let editingProjectId =
-    null;
+const firebaseApp =
+    initializeApp(firebaseConfig);
 
+const auth =
+    getAuth(firebaseApp);
+
+const db =
+    getFirestore(firebaseApp);
+
+
+/* =========================================
+   全域狀態
+========================================= */
+
+let currentUser = null;
+
+let items = [];
+
+let projects = [];
+
+let currentPage = "dashboard";
+
+let editingItemId = null;
+
+let editingProjectId = null;
+
+let unsubscribeProjects = null;
+
+let unsubscribeItems = null;
+
+let dataReady = false;
 
 const app =
     document.querySelector("#app");
 
-
 const today =
     new Date();
-
 
 const isoToday =
     today.toISOString().slice(0, 10);
 
+
+/* =========================================
+   DOM
+========================================= */
+
+const loginScreen =
+    document.querySelector("#loginScreen");
+
+const system =
+    document.querySelector("#system");
+
+const loginForm =
+    document.querySelector("#loginForm");
+
+const loginEmail =
+    document.querySelector("#loginEmail");
+
+const loginPassword =
+    document.querySelector("#loginPassword");
+
+const loginError =
+    document.querySelector("#loginError");
+
+const loginBtn =
+    document.querySelector("#loginBtn");
+
+const logoutBtn =
+    document.querySelector("#logoutBtn");
 
 
 /* =========================================
@@ -55,8 +130,7 @@ const isoToday =
 
 function addDays(number) {
 
-    const d =
-        new Date();
+    const d = new Date();
 
     d.setDate(
         d.getDate() + number
@@ -65,7 +139,6 @@ function addDays(number) {
     return d
         .toISOString()
         .slice(0, 10);
-
 }
 
 
@@ -75,34 +148,7 @@ function formatDate(date) {
         return "";
 
     return date.replaceAll("-", "/");
-
 }
-
-
-
-/* =========================================
-   儲存
-========================================= */
-
-function saveItems() {
-
-    localStorage.setItem(
-        ITEM_KEY,
-        JSON.stringify(items)
-    );
-
-}
-
-
-function saveProjects() {
-
-    localStorage.setItem(
-        PROJECT_KEY,
-        JSON.stringify(projects)
-    );
-
-}
-
 
 
 /* =========================================
@@ -131,7 +177,6 @@ function esc(text = "") {
 }
 
 
-
 /* =========================================
    Toast
 ========================================= */
@@ -141,13 +186,10 @@ function toast(message) {
     const box =
         document.querySelector("#toast");
 
-
     box.textContent =
         message;
 
-
     box.classList.add("show");
-
 
     setTimeout(
         function () {
@@ -163,83 +205,301 @@ function toast(message) {
 }
 
 
-
 /* =========================================
-   範例案場
+   Firestore 路徑
 ========================================= */
 
-if (projects.length === 0) {
+function userCollection(name) {
 
-    projects = [
-
-        {
-            id: 1,
-            code: "A001",
-            name: "○○大樓",
-            address: "台中市太平區",
-            contact: "",
-            phone: "",
-            note: "消防工程",
-            archived: false
-        },
-
-        {
-            id: 2,
-            code: "A002",
-            name: "△△廠辦",
-            address: "台中市大里區",
-            contact: "",
-            phone: "",
-            note: "",
-            archived: false
-        }
-
-    ];
-
-    saveProjects();
+    return collection(
+        db,
+        "users",
+        currentUser.uid,
+        name
+    );
 
 }
 
 
-
 /* =========================================
-   新增範例工作
+   Firebase 登入
 ========================================= */
 
-if (items.length === 0) {
+loginForm.addEventListener(
+    "submit",
+    async function (event) {
 
-    items = [
+        event.preventDefault();
 
-        {
-            id: 1,
-            projectId: 1,
-            type: "進料",
-            date: isoToday,
-            time: "09:00",
-            title: "消防箱 20 組進公司",
-            note: "確認數量與外觀",
-            reminder: "none",
-            done: false
-        },
+        loginError.textContent = "";
 
-        {
-            id: 2,
-            projectId: 1,
-            type: "出貨",
-            date: addDays(1),
-            time: "10:00",
-            title: "消防箱出貨至工地",
-            note: "安排貨車",
-            reminder: "1",
-            done: false
+        loginBtn.disabled = true;
+
+        loginBtn.textContent =
+            "登入中…";
+
+        try {
+
+            await signInWithEmailAndPassword(
+                auth,
+                loginEmail.value.trim(),
+                loginPassword.value
+            );
+
+            loginPassword.value = "";
+
         }
 
-    ];
+        catch (error) {
 
-    saveItems();
+            console.error(error);
+
+            loginError.textContent =
+                getLoginErrorMessage(
+                    error.code
+                );
+
+        }
+
+        finally {
+
+            loginBtn.disabled = false;
+
+            loginBtn.textContent =
+                "登入系統";
+
+        }
+
+    }
+);
+
+
+/* =========================================
+   登入錯誤
+========================================= */
+
+function getLoginErrorMessage(code) {
+
+    switch (code) {
+
+        case "auth/invalid-credential":
+            return "Email 或密碼錯誤。";
+
+        case "auth/user-not-found":
+            return "找不到這個帳號。";
+
+        case "auth/wrong-password":
+            return "密碼錯誤。";
+
+        case "auth/invalid-email":
+            return "Email 格式不正確。";
+
+        case "auth/too-many-requests":
+            return "嘗試次數過多，請稍後再試。";
+
+        default:
+            return "登入失敗，請確認帳號與密碼。";
+
+    }
 
 }
 
+
+/* =========================================
+   登出
+========================================= */
+
+logoutBtn.addEventListener(
+    "click",
+    async function () {
+
+        if (
+            !confirm(
+                "確定要登出 Yao 嗎？"
+            )
+        )
+            return;
+
+        await signOut(auth);
+
+    }
+);
+
+
+/* =========================================
+   Firebase 登入狀態
+========================================= */
+
+onAuthStateChanged(
+    auth,
+    async function (user) {
+
+        if (user) {
+
+            currentUser =
+                user;
+
+            loginScreen.classList.add(
+                "hidden"
+            );
+
+            system.classList.remove(
+                "hidden"
+            );
+
+            await startRealtimeData();
+
+        }
+
+        else {
+
+            currentUser =
+                null;
+
+            stopRealtimeData();
+
+            system.classList.add(
+                "hidden"
+            );
+
+            loginScreen.classList.remove(
+                "hidden"
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================================
+   啟動即時資料
+========================================= */
+
+async function startRealtimeData() {
+
+    dataReady = false;
+
+    items = [];
+
+    projects = [];
+
+    if (unsubscribeProjects)
+        unsubscribeProjects();
+
+    if (unsubscribeItems)
+        unsubscribeItems();
+
+
+    unsubscribeProjects =
+        onSnapshot(
+            userCollection("projects"),
+            snapshot => {
+
+                projects =
+                    snapshot.docs.map(
+                        docItem => ({
+
+                            id:
+                                docItem.id,
+
+                            ...docItem.data()
+
+                        })
+                    );
+
+                dataReady =
+                    true;
+
+                render();
+
+            },
+            error => {
+
+                console.error(
+                    "案場同步失敗:",
+                    error
+                );
+
+                toast(
+                    "案場資料讀取失敗"
+                );
+
+            }
+        );
+
+
+    unsubscribeItems =
+        onSnapshot(
+            userCollection("items"),
+            snapshot => {
+
+                items =
+                    snapshot.docs.map(
+                        docItem => ({
+
+                            id:
+                                docItem.id,
+
+                            ...docItem.data()
+
+                        })
+                    );
+
+                dataReady =
+                    true;
+
+                render();
+
+            },
+            error => {
+
+                console.error(
+                    "工作同步失敗:",
+                    error
+                );
+
+                toast(
+                    "工作資料讀取失敗"
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================
+   停止即時資料
+========================================= */
+
+function stopRealtimeData() {
+
+    if (unsubscribeProjects) {
+
+        unsubscribeProjects();
+
+        unsubscribeProjects =
+            null;
+
+    }
+
+    if (unsubscribeItems) {
+
+        unsubscribeItems();
+
+        unsubscribeItems =
+            null;
+
+    }
+
+    items = [];
+
+    projects = [];
+
+    dataReady = false;
+
+}
 
 
 /* =========================================
@@ -249,15 +509,16 @@ if (items.length === 0) {
 function getProject(id) {
 
     return projects.find(
-        p => Number(p.id) === Number(id)
+        p =>
+            String(p.id) ===
+            String(id)
     );
 
 }
 
 
-
 /* =========================================
-   類型顏色
+   類型
 ========================================= */
 
 function typeClass(type) {
@@ -277,7 +538,6 @@ function typeClass(type) {
     return "";
 
 }
-
 
 
 /* =========================================
@@ -311,9 +571,9 @@ function filteredItems() {
 
                 project?.name || "",
                 project?.code || "",
-                item.title,
-                item.note,
-                item.type
+                item.title || "",
+                item.note || "",
+                item.type || ""
 
             ]
                 .join(" ")
@@ -326,12 +586,42 @@ function filteredItems() {
 }
 
 
-
 /* =========================================
    導覽
 ========================================= */
 
 function render() {
+
+    if (!currentUser)
+        return;
+
+
+    if (!dataReady) {
+
+        app.innerHTML = `
+
+            <div class="card loading-card">
+
+                <div class="loading-spinner">
+                    ⏳
+                </div>
+
+                <h3>
+                    正在載入雲端資料…
+                </h3>
+
+                <div class="muted">
+                    正在與 Firebase 同步
+                </div>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
 
     const titles = {
 
@@ -453,7 +743,6 @@ function render() {
 }
 
 
-
 /* =========================================
    儀表板
 ========================================= */
@@ -480,10 +769,10 @@ function renderDashboard(data) {
                 (a, b) =>
                     (
                         a.date +
-                        a.time
+                        (a.time || "")
                     ).localeCompare(
                         b.date +
-                        b.time
+                        (b.time || "")
                     )
             )
             .slice(0, 7);
@@ -500,10 +789,8 @@ function renderDashboard(data) {
         items.filter(
             x =>
                 !x.done &&
-                x.date >
-                isoToday &&
-                x.reminder !==
-                "none"
+                x.date > isoToday &&
+                x.reminder !== "none"
         ).length;
 
 
@@ -517,7 +804,6 @@ function renderDashboard(data) {
     app.innerHTML = `
 
         <div class="grid stats">
-
 
             <div class="stat">
 
@@ -570,9 +856,7 @@ function renderDashboard(data) {
 
             </div>
 
-
         </div>
-
 
 
         <div
@@ -580,13 +864,11 @@ function renderDashboard(data) {
             style="margin-top:16px"
         >
 
-
             <div class="card">
 
                 <h3>
                     今天要處理
                 </h3>
-
 
                 <div class="list">
 
@@ -609,13 +891,11 @@ function renderDashboard(data) {
             </div>
 
 
-
             <div class="card">
 
                 <h3>
                     接下來
                 </h3>
-
 
                 <div class="list">
 
@@ -637,13 +917,11 @@ function renderDashboard(data) {
 
             </div>
 
-
         </div>
 
     `;
 
 }
-
 
 
 /* =========================================
@@ -666,15 +944,11 @@ function itemRow(item) {
 
         <div class="list-row">
 
-
             <div class="list-main">
 
                 <strong>
-
                     ${esc(item.title)}
-
                 </strong>
-
 
                 <span>
 
@@ -699,43 +973,35 @@ function itemRow(item) {
             </div>
 
 
-
             <div class="row-actions">
-
 
                 <span
                     class="tag ${typeClass(item.type)}"
                 >
-
                     ${esc(item.type)}
-
                 </span>
-
 
 
                 <button
                     class="mini-btn"
-                    onclick="editItem(${item.id})"
+                    onclick="editItem('${item.id}')"
                 >
                     ✏️ 編輯
                 </button>
 
 
-
                 <button
                     class="mini-btn"
-                    onclick="shareItem(${item.id})"
+                    onclick="shareItem('${item.id}')"
                 >
                     📤 分享
                 </button>
 
 
-
                 <button
                     class="mini-btn"
-                    onclick="toggleDone(${item.id})"
+                    onclick="toggleDone('${item.id}')"
                 >
-
                     ${
                         item.done
                         ?
@@ -743,28 +1009,23 @@ function itemRow(item) {
                         :
                         "完成"
                     }
-
                 </button>
-
 
 
                 <button
                     class="mini-btn delete"
-                    onclick="deleteItem(${item.id})"
+                    onclick="deleteItem('${item.id}')"
                 >
                     🗑️
                 </button>
 
-
             </div>
-
 
         </div>
 
     `;
 
 }
-
 
 
 /* =========================================
@@ -799,7 +1060,6 @@ function renderListPage(
         </div>
 
 
-
         <div class="card">
 
             <div class="list">
@@ -807,11 +1067,12 @@ function renderListPage(
                 ${
                     data.length
                     ?
-                    data
+                    [...data]
                         .sort(
                             (a, b) =>
-                                a.date.localeCompare(
-                                    b.date
+                                (a.date || "")
+                                .localeCompare(
+                                    b.date || ""
                                 )
                         )
                         .map(itemRow)
@@ -831,7 +1092,6 @@ function renderListPage(
     `;
 
 }
-
 
 
 /* =========================================
@@ -865,9 +1125,7 @@ function renderProjects() {
                 </strong>
 
                 <div class="muted">
-
                     建立一次，之後所有工作都從下拉選單選擇
-
                 </div>
 
             </div>
@@ -883,21 +1141,24 @@ function renderProjects() {
         </div>
 
 
-
         <div class="grid project-grid">
 
-
             ${
+                active.length
+                ?
                 active
-                    .map(
-                        projectCard
-                    )
+                    .map(projectCard)
                     .join("")
+                :
+                `
+                <div class="card empty">
+                    目前還沒有案場<br>
+                    請按「新增案場」建立第一個案場
+                </div>
+                `
             }
 
-
         </div>
-
 
 
         ${
@@ -914,14 +1175,11 @@ function renderProjects() {
                     📦 已封存案場
                 </h3>
 
-
                 <div class="grid project-grid">
 
                     ${
                         archived
-                            .map(
-                                projectCard
-                            )
+                            .map(projectCard)
                             .join("")
                     }
 
@@ -939,7 +1197,6 @@ function renderProjects() {
 }
 
 
-
 /* =========================================
    案場卡片
 ========================================= */
@@ -949,8 +1206,8 @@ function projectCard(project) {
     const projectItems =
         items.filter(
             x =>
-                Number(x.projectId) ===
-                Number(project.id)
+                String(x.projectId) ===
+                String(project.id)
         );
 
 
@@ -980,23 +1237,16 @@ function projectCard(project) {
             "
         >
 
-
             <div class="project-head">
-
 
                 <div>
 
                     <div class="project-code">
-
                         ${esc(project.code)}
-
                     </div>
 
-
                     <h3>
-
                         ${esc(project.name)}
-
                     </h3>
 
                 </div>
@@ -1019,9 +1269,7 @@ function projectCard(project) {
 
                 </span>
 
-
             </div>
-
 
 
             <div class="project-info">
@@ -1030,7 +1278,6 @@ function projectCard(project) {
                 ${esc(project.address || "尚未填寫")}
 
                 <br>
-
 
                 👤
                 ${esc(project.contact || "尚未填寫")}
@@ -1046,12 +1293,10 @@ function projectCard(project) {
 
                 <br>
 
-
                 📝
                 ${esc(project.note || "無備註")}
 
             </div>
-
 
 
             <div class="progress">
@@ -1078,13 +1323,11 @@ function projectCard(project) {
             </div>
 
 
-
             <div class="project-actions">
-
 
                 <button
                     class="mini-btn"
-                    onclick="viewProject(${project.id})"
+                    onclick="viewProject('${project.id}')"
                 >
                     查看
                 </button>
@@ -1092,7 +1335,7 @@ function projectCard(project) {
 
                 <button
                     class="mini-btn"
-                    onclick="editProject(${project.id})"
+                    onclick="editProject('${project.id}')"
                 >
                     ✏️ 編輯
                 </button>
@@ -1100,7 +1343,7 @@ function projectCard(project) {
 
                 <button
                     class="mini-btn archive"
-                    onclick="toggleArchive(${project.id})"
+                    onclick="toggleArchive('${project.id}')"
                 >
 
                     ${
@@ -1116,21 +1359,18 @@ function projectCard(project) {
 
                 <button
                     class="mini-btn delete"
-                    onclick="deleteProject(${project.id})"
+                    onclick="deleteProject('${project.id}')"
                 >
                     🗑️
                 </button>
 
-
             </div>
-
 
         </div>
 
     `;
 
 }
-
 
 
 /* =========================================
@@ -1150,15 +1390,14 @@ function viewProject(id) {
     const projectItems =
         items.filter(
             x =>
-                Number(x.projectId) ===
-                Number(id)
+                String(x.projectId) ===
+                String(id)
         );
 
 
     app.innerHTML = `
 
         <div class="project-toolbar">
-
 
             <div>
 
@@ -1189,7 +1428,7 @@ function viewProject(id) {
 
                 <button
                     class="btn primary"
-                    onclick="openItemModal(null, ${project.id})"
+                    onclick="openItemModal(null, '${project.id}')"
                 >
                     ＋ 新增工作
                 </button>
@@ -1197,7 +1436,6 @@ function viewProject(id) {
             </div>
 
         </div>
-
 
 
         <div class="card">
@@ -1214,9 +1452,10 @@ function viewProject(id) {
                     ?
                     projectItems
                         .sort(
-                            (a,b) =>
-                                a.date.localeCompare(
-                                    b.date
+                            (a, b) =>
+                                (a.date || "")
+                                .localeCompare(
+                                    b.date || ""
                                 )
                         )
                         .map(itemRow)
@@ -1238,9 +1477,54 @@ function viewProject(id) {
 }
 
 
+/* =========================================
+   自動編號
+========================================= */
+
+function getNextProjectCode() {
+
+    let max = 0;
+
+
+    projects.forEach(
+        function (project) {
+
+            const number =
+                parseInt(
+                    String(project.code || "")
+                        .replace(
+                            "A",
+                            ""
+                        ),
+                    10
+                );
+
+
+            if (
+                !isNaN(number) &&
+                number > max
+            ) {
+
+                max =
+                    number;
+
+            }
+
+        }
+    );
+
+
+    return (
+        "A" +
+        String(max + 1)
+            .padStart(3, "0")
+    );
+
+}
+
 
 /* =========================================
-   新增案場
+   案場新增 / 編輯
 ========================================= */
 
 function openProjectModal(id = null) {
@@ -1278,7 +1562,7 @@ function openProjectModal(id = null) {
         document.querySelector(
             "#projectName"
         ).value =
-            project.name;
+            project.name || "";
 
 
         document.querySelector(
@@ -1311,7 +1595,6 @@ function openProjectModal(id = null) {
         title.textContent =
             "新增案場";
 
-
         document
             .querySelector(
                 "#projectForm"
@@ -1328,11 +1611,6 @@ function openProjectModal(id = null) {
 }
 
 
-
-/* =========================================
-   關閉案場
-========================================= */
-
 function closeProjectModal() {
 
     document
@@ -1343,17 +1621,11 @@ function closeProjectModal() {
             "hidden"
         );
 
-
     editingProjectId =
         null;
 
 }
 
-
-
-/* =========================================
-   編輯案場
-========================================= */
 
 function editProject(id) {
 
@@ -1362,156 +1634,8 @@ function editProject(id) {
 }
 
 
-
 /* =========================================
-   自動編號
-========================================= */
-
-function getNextProjectCode() {
-
-    let max =
-        0;
-
-
-    projects.forEach(
-        function (project) {
-
-            const number =
-                parseInt(
-                    String(project.code)
-                        .replace(
-                            "A",
-                            ""
-                        ),
-                    10
-                );
-
-
-            if (
-                !isNaN(number) &&
-                number > max
-            ) {
-
-                max =
-                    number;
-
-            }
-
-        }
-    );
-
-
-    return (
-        "A" +
-        String(max + 1)
-            .padStart(3, "0")
-    );
-
-}
-
-
-
-/* =========================================
-   封存
-========================================= */
-
-function toggleArchive(id) {
-
-    const project =
-        getProject(id);
-
-
-    if (!project)
-        return;
-
-
-    project.archived =
-        !project.archived;
-
-
-    saveProjects();
-
-
-    render();
-
-
-    toast(
-        project.archived
-        ?
-        "案場已封存"
-        :
-        "案場已恢復"
-    );
-
-}
-
-
-
-/* =========================================
-   刪除案場
-========================================= */
-
-function deleteProject(id) {
-
-    const project =
-        getProject(id);
-
-
-    if (!project)
-        return;
-
-
-    const count =
-        items.filter(
-            x =>
-                Number(x.projectId) ===
-                Number(id)
-        ).length;
-
-
-    if (count > 0) {
-
-        alert(
-            `這個案場目前還有 ${count} 筆工作資料。\n\n請先保留案場或封存，不建議直接刪除。`
-        );
-
-        return;
-
-    }
-
-
-    if (
-        !confirm(
-            `確定刪除「${project.name}」嗎？`
-        )
-    )
-        return;
-
-
-    projects =
-        projects.filter(
-            x =>
-                Number(x.id) !==
-                Number(id)
-        );
-
-
-    saveProjects();
-
-
-    render();
-
-
-    toast(
-        "案場已刪除"
-    );
-
-}
-
-
-
-/* =========================================
-   工作新增 / 編輯
+   新增 / 編輯工作
 ========================================= */
 
 function openItemModal(
@@ -1541,23 +1665,23 @@ function openItemModal(
         );
 
 
-    populateProjectSelect(
-        defaultProjectId
-    );
-
-
     if (id !== null) {
 
         const item =
             items.find(
                 x =>
-                    Number(x.id) ===
-                    Number(id)
+                    String(x.id) ===
+                    String(id)
             );
 
 
         if (!item)
             return;
+
+
+        populateProjectSelect(
+            item.projectId
+        );
 
 
         title.textContent =
@@ -1648,9 +1772,8 @@ function openItemModal(
 }
 
 
-
 /* =========================================
-   案場下拉選單
+   案場下拉
 ========================================= */
 
 function populateProjectSelect(
@@ -1689,7 +1812,6 @@ function populateProjectSelect(
         ).textContent =
             "請先到「案場」建立案場";
 
-
         return;
 
     }
@@ -1715,8 +1837,8 @@ function populateProjectSelect(
                     <option
                         value="${p.id}"
                         ${
-                            Number(selectedId) ===
-                            Number(p.id)
+                            String(selectedId) ===
+                            String(p.id)
                             ?
                             "selected"
                             :
@@ -1737,7 +1859,6 @@ function populateProjectSelect(
     `;
 
 }
-
 
 
 /* =========================================
@@ -1761,11 +1882,6 @@ function closeItemModal() {
 }
 
 
-
-/* =========================================
-   編輯工作
-========================================= */
-
 function editItem(id) {
 
     openItemModal(id);
@@ -1773,18 +1889,17 @@ function editItem(id) {
 }
 
 
-
 /* =========================================
    刪除工作
 ========================================= */
 
-function deleteItem(id) {
+async function deleteItem(id) {
 
     const item =
         items.find(
             x =>
-                Number(x.id) ===
-                Number(id)
+                String(x.id) ===
+                String(id)
         );
 
 
@@ -1800,39 +1915,48 @@ function deleteItem(id) {
         return;
 
 
-    items =
-        items.filter(
-            x =>
-                Number(x.id) !==
-                Number(id)
+    try {
+
+        await deleteDoc(
+            doc(
+                db,
+                "users",
+                currentUser.uid,
+                "items",
+                String(id)
+            )
         );
 
+        toast(
+            "資料已刪除"
+        );
 
-    saveItems();
+    }
 
+    catch (error) {
 
-    render();
+        console.error(error);
 
+        toast(
+            "刪除失敗"
+        );
 
-    toast(
-        "資料已刪除"
-    );
+    }
 
 }
-
 
 
 /* =========================================
    完成 / 恢復
 ========================================= */
 
-function toggleDone(id) {
+async function toggleDone(id) {
 
     const item =
         items.find(
             x =>
-                Number(x.id) ===
-                Number(id)
+                String(x.id) ===
+                String(id)
         );
 
 
@@ -1840,26 +1964,168 @@ function toggleDone(id) {
         return;
 
 
-    item.done =
-        !item.done;
+    try {
 
+        await updateDoc(
+            doc(
+                db,
+                "users",
+                currentUser.uid,
+                "items",
+                String(id)
+            ),
+            {
+                done:
+                    !item.done
+            }
+        );
 
-    saveItems();
+        toast(
+            item.done
+            ?
+            "已恢復"
+            :
+            "已完成"
+        );
 
+    }
 
-    render();
+    catch (error) {
 
+        console.error(error);
 
-    toast(
-        item.done
-        ?
-        "已完成"
-        :
-        "已恢復"
-    );
+        toast(
+            "更新失敗"
+        );
+
+    }
 
 }
 
+
+/* =========================================
+   刪除案場
+========================================= */
+
+async function deleteProject(id) {
+
+    const project =
+        getProject(id);
+
+
+    if (!project)
+        return;
+
+
+    const count =
+        items.filter(
+            x =>
+                String(x.projectId) ===
+                String(id)
+        ).length;
+
+
+    if (count > 0) {
+
+        alert(
+            `這個案場目前還有 ${count} 筆工作資料。\n\n請先保留案場或封存，不建議直接刪除。`
+        );
+
+        return;
+
+    }
+
+
+    if (
+        !confirm(
+            `確定刪除「${project.name}」嗎？`
+        )
+    )
+        return;
+
+
+    try {
+
+        await deleteDoc(
+            doc(
+                db,
+                "users",
+                currentUser.uid,
+                "projects",
+                String(id)
+            )
+        );
+
+        toast(
+            "案場已刪除"
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        toast(
+            "刪除失敗"
+        );
+
+    }
+
+}
+
+
+/* =========================================
+   封存
+========================================= */
+
+async function toggleArchive(id) {
+
+    const project =
+        getProject(id);
+
+
+    if (!project)
+        return;
+
+
+    try {
+
+        await updateDoc(
+            doc(
+                db,
+                "users",
+                currentUser.uid,
+                "projects",
+                String(id)
+            ),
+            {
+                archived:
+                    !project.archived
+            }
+        );
+
+        toast(
+            project.archived
+            ?
+            "案場已恢復"
+            :
+            "案場已封存"
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        toast(
+            "更新失敗"
+        );
+
+    }
+
+}
 
 
 /* =========================================
@@ -1871,8 +2137,8 @@ async function shareItem(id) {
     const item =
         items.find(
             x =>
-                Number(x.id) ===
-                Number(id)
+                String(x.id) ===
+                String(id)
         );
 
 
@@ -1887,7 +2153,6 @@ async function shareItem(id) {
 
 
     const text =
-
 `【${project?.code || ""}｜${project?.name || ""}】
 
 📌 ${item.type}
@@ -1925,7 +2190,6 @@ ${item.note ? "備註：" + item.note : ""}`;
 
         }
 
-
         return;
 
     }
@@ -1944,7 +2208,6 @@ ${item.note ? "備註：" + item.note : ""}`;
             "已複製分享內容，可貼到 LINE"
         );
 
-
         return;
 
     }
@@ -1958,7 +2221,6 @@ ${item.note ? "備註：" + item.note : ""}`;
 }
 
 
-
 /* =========================================
    行事曆
 ========================================= */
@@ -1968,10 +2230,8 @@ function renderCalendar(data) {
     const year =
         today.getFullYear();
 
-
     const month =
         today.getMonth();
-
 
     const first =
         new Date(
@@ -1979,7 +2239,6 @@ function renderCalendar(data) {
             month,
             1
         ).getDay();
-
 
     const days =
         new Date(
@@ -2035,7 +2294,6 @@ function renderCalendar(data) {
     ) {
 
         const date =
-
             `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
 
@@ -2066,7 +2324,7 @@ function renderCalendar(data) {
                                     event
                                     ${typeClass(x.type)}
                                 "
-                                onclick="editItem(${x.id})"
+                                onclick="editItem('${x.id}')"
                             >
 
                                 ${esc(x.title)}
@@ -2098,7 +2356,6 @@ function renderCalendar(data) {
 }
 
 
-
 /* =========================================
    工作表單
 ========================================= */
@@ -2109,7 +2366,7 @@ document
     )
     .addEventListener(
         "submit",
-        function (event) {
+        async function (event) {
 
             event.preventDefault();
 
@@ -2134,7 +2391,7 @@ document
             const data = {
 
                 projectId:
-                    Number(projectId),
+                    String(projectId),
 
                 type:
                     document.querySelector(
@@ -2164,73 +2421,83 @@ document
                 reminder:
                     document.querySelector(
                         "#itemReminder"
-                    ).value
+                    ).value,
+
+                done:
+                    false
 
             };
 
 
-            if (
-                editingItemId !==
-                null
-            ) {
+            try {
 
-                const item =
-                    items.find(
-                        x =>
-                            Number(x.id) ===
-                            Number(editingItemId)
+                if (
+                    editingItemId !==
+                    null
+                ) {
+
+                    const oldItem =
+                        items.find(
+                            x =>
+                                String(x.id) ===
+                                String(editingItemId)
+                        );
+
+
+                    await updateDoc(
+                        doc(
+                            db,
+                            "users",
+                            currentUser.uid,
+                            "items",
+                            String(editingItemId)
+                        ),
+                        {
+                            ...data,
+                            done:
+                                oldItem?.done ||
+                                false
+                        }
                     );
 
 
-                if (item) {
+                    toast(
+                        "資料已修改"
+                    );
 
-                    Object.assign(
-                        item,
+                }
+
+                else {
+
+                    await addDoc(
+                        userCollection("items"),
                         data
+                    );
+
+
+                    toast(
+                        "資料已新增"
                     );
 
                 }
 
 
-                toast(
-                    "資料已修改"
-                );
+                closeItemModal();
 
             }
 
-            else {
+            catch (error) {
 
-                items.push({
-
-                    id:
-                        Date.now(),
-
-                    ...data,
-
-                    done:
-                        false
-
-                });
-
+                console.error(error);
 
                 toast(
-                    "資料已新增"
+                    "資料儲存失敗"
                 );
 
             }
-
-
-            saveItems();
-
-
-            closeItemModal();
-
-
-            render();
 
         }
     );
-
 
 
 /* =========================================
@@ -2243,7 +2510,7 @@ document
     )
     .addEventListener(
         "submit",
-        function (event) {
+        async function (event) {
 
             event.preventDefault();
 
@@ -2278,103 +2545,89 @@ document
                 ).value.trim();
 
 
+            try {
 
-            /* 編輯 */
+                if (
+                    editingProjectId !==
+                    null
+                ) {
 
-            if (
-                editingProjectId !==
-                null
-            ) {
-
-                const project =
-                    getProject(
-                        editingProjectId
+                    await updateDoc(
+                        doc(
+                            db,
+                            "users",
+                            currentUser.uid,
+                            "projects",
+                            String(editingProjectId)
+                        ),
+                        {
+                            name,
+                            address,
+                            contact,
+                            phone,
+                            note
+                        }
                     );
 
 
-                if (project) {
+                    toast(
+                        "案場資料已修改"
+                    );
 
-                    project.name =
-                        name;
+                }
 
-                    project.address =
-                        address;
+                else {
 
-                    project.contact =
-                        contact;
+                    const newProject = {
 
-                    project.phone =
-                        phone;
+                        code:
+                            getNextProjectCode(),
 
-                    project.note =
-                        note;
+                        name,
+
+                        address,
+
+                        contact,
+
+                        phone,
+
+                        note,
+
+                        archived:
+                            false
+
+                    };
+
+
+                    await addDoc(
+                        userCollection("projects"),
+                        newProject
+                    );
+
+
+                    toast(
+                        `案場 ${newProject.code} 已建立`
+                    );
 
                 }
 
 
-                toast(
-                    "案場資料已修改"
-                );
+                closeProjectModal();
 
             }
 
+            catch (error) {
 
-            /* 新增 */
-
-            else {
-
-                const newProject = {
-
-                    id:
-                        Date.now(),
-
-                    code:
-                        getNextProjectCode(),
-
-                    name:
-                        name,
-
-                    address:
-                        address,
-
-                    contact:
-                        contact,
-
-                    phone:
-                        phone,
-
-                    note:
-                        note,
-
-                    archived:
-                        false
-
-                };
-
-
-                projects.push(
-                    newProject
-                );
-
+                console.error(error);
 
                 toast(
-                    `案場 ${newProject.code} 已建立`
+                    "案場儲存失敗"
                 );
 
             }
-
-
-            saveProjects();
-
-
-            closeProjectModal();
-
-
-            render();
 
         }
     );
-
 
 
 /* =========================================
@@ -2409,7 +2662,6 @@ document
     );
 
 
-
 /* =========================================
    快速新增
 ========================================= */
@@ -2419,11 +2671,11 @@ document
         "#quickAddBtn"
     )
     .onclick =
-        function () {
+    function () {
 
-            openItemModal();
+        openItemModal();
 
-        };
+    };
 
 
 document
@@ -2431,16 +2683,15 @@ document
         "#headerAddBtn"
     )
     .onclick =
-        function () {
+    function () {
 
-            openItemModal();
+        openItemModal();
 
-        };
-
+    };
 
 
 /* =========================================
-   關閉工作視窗
+   關閉工作
 ========================================= */
 
 document
@@ -2448,7 +2699,7 @@ document
         "#closeItemModal"
     )
     .onclick =
-        closeItemModal;
+    closeItemModal;
 
 
 document
@@ -2456,12 +2707,11 @@ document
         "#cancelItemModal"
     )
     .onclick =
-        closeItemModal;
-
+    closeItemModal;
 
 
 /* =========================================
-   關閉案場視窗
+   關閉案場
 ========================================= */
 
 document
@@ -2469,7 +2719,7 @@ document
         "#closeProjectModal"
     )
     .onclick =
-        closeProjectModal;
+    closeProjectModal;
 
 
 document
@@ -2477,12 +2727,11 @@ document
         "#cancelProjectModal"
     )
     .onclick =
-        closeProjectModal;
-
+    closeProjectModal;
 
 
 /* =========================================
-   點背景關閉
+   背景關閉
 ========================================= */
 
 document
@@ -2527,7 +2776,6 @@ document
     );
 
 
-
 /* =========================================
    搜尋
 ========================================= */
@@ -2542,9 +2790,40 @@ document
     );
 
 
-
 /* =========================================
-   啟動
+   全域函式
+   HTML onclick 需要
 ========================================= */
 
-render();
+window.editItem =
+    editItem;
+
+window.deleteItem =
+    deleteItem;
+
+window.toggleDone =
+    toggleDone;
+
+window.shareItem =
+    shareItem;
+
+window.openItemModal =
+    openItemModal;
+
+window.renderProjects =
+    renderProjects;
+
+window.viewProject =
+    viewProject;
+
+window.openProjectModal =
+    openProjectModal;
+
+window.editProject =
+    editProject;
+
+window.deleteProject =
+    deleteProject;
+
+window.toggleArchive =
+    toggleArchive;

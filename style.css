@@ -1,3 +1,14 @@
+/* =========================================================
+   YAO V3
+   消防工程行政管理系統
+   style.css
+   ========================================================= */
+
+
+/* =========================================================
+   基礎設定
+   ========================================================= */
+
 * {
     box-sizing: border-box;
 }
@@ -10,6 +21,10 @@ body {
     min-height: 100%;
 }
 
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     font-family:
         "Microsoft JhengHei",
@@ -19,12 +34,14 @@ body {
 
     background: #f5f7fa;
     color: #172033;
+
+    line-height: 1.5;
 }
 
 
-/* =========================
+/* =========================================================
    左側選單｜電腦版
-========================= */
+   ========================================================= */
 
 .sidebar {
     position: fixed;
@@ -76,6 +93,7 @@ body {
     display: block;
 
     font-size: 20px;
+    line-height: 1.2;
 }
 
 .brand span {
@@ -86,6 +104,11 @@ body {
     font-size: 11px;
 
     margin-top: 3px;
+}
+
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
 }
 
 .nav-item {
@@ -108,13 +131,25 @@ body {
     font-size: 14px;
 
     cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease,
+        transform 0.1s ease;
 }
 
-.nav-item:hover,
+.nav-item:hover {
+    background: #1c2638;
+    color: white;
+}
+
 .nav-item.active {
     background: #253044;
-
     color: white;
+}
+
+.nav-item:active {
+    transform: scale(0.98);
 }
 
 .sidebar-bottom {
@@ -137,6 +172,18 @@ body {
     font-weight: bold;
 
     cursor: pointer;
+
+    transition:
+        opacity 0.15s ease,
+        transform 0.1s ease;
+}
+
+.quick-add:hover {
+    opacity: 0.9;
+}
+
+.quick-add:active {
+    transform: scale(0.98);
 }
 
 .sidebar-bottom small {
@@ -150,9 +197,9 @@ body {
 }
 
 
-/* =========================
+/* =========================================================
    主畫面
-========================= */
+   ========================================================= */
 
 .main {
     margin-left: 240px;
@@ -188,6 +235,8 @@ body {
     margin: 0;
 
     font-size: 28px;
+
+    line-height: 1.25;
 }
 
 .top-actions {
@@ -212,17 +261,36 @@ body {
     padding: 11px 13px;
 
     outline: none;
+
+    color: #172033;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.search::placeholder {
+    color: #9ca3af;
+}
+
+.search:focus {
+    border-color: #9aa6b8;
+
+    box-shadow:
+        0 0 0 3px rgba(23, 32, 51, 0.06);
 }
 
 
-/* =========================
+/* =========================================================
    按鈕
-========================= */
+   ========================================================= */
 
 .btn {
     border: 1px solid #d9dee7;
 
     background: white;
+
+    color: #172033;
 
     border-radius: 9px;
 
@@ -231,6 +299,19 @@ body {
     cursor: pointer;
 
     font-weight: 600;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+}
+
+.btn:hover {
+    background: #f8fafc;
+}
+
+.btn:active {
+    transform: scale(0.98);
 }
 
 .btn.primary {
@@ -239,6 +320,12 @@ body {
     color: white;
 
     border-color: #172033;
+}
+
+.btn.primary:hover {
+    background: #253044;
+
+    border-color: #253044;
 }
 
 .btn.small {
@@ -252,6 +339,8 @@ body {
 
     background: white;
 
+    color: #172033;
+
     border-radius: 7px;
 
     padding: 6px 9px;
@@ -259,10 +348,29 @@ body {
     cursor: pointer;
 
     font-size: 12px;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+}
+
+.mini-btn:hover {
+    background: #f8fafc;
+}
+
+.mini-btn:active {
+    transform: scale(0.97);
 }
 
 .mini-btn.delete {
     color: #b91c1c;
+}
+
+.mini-btn.delete:hover {
+    background: #fef2f2;
+
+    border-color: #fecaca;
 }
 
 .mini-btn.archive {
@@ -270,9 +378,9 @@ body {
 }
 
 
-/* =========================
+/* =========================================================
    通用
-========================= */
+   ========================================================= */
 
 .grid {
     display: grid;
@@ -310,6 +418,8 @@ body {
     font-weight: 800;
 
     margin-top: 8px;
+
+    line-height: 1.2;
 }
 
 .two-col {
@@ -340,9 +450,9 @@ body {
 }
 
 
-/* =========================
+/* =========================================================
    資料列表
-========================= */
+   ========================================================= */
 
 .list {
     display: flex;
@@ -368,6 +478,18 @@ body {
     align-items: center;
 
     min-width: 0;
+
+    background: white;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.list-row:hover {
+    background: #fafbfc;
+
+    border-color: #dfe4eb;
 }
 
 .list-main {
@@ -410,6 +532,10 @@ body {
 
 .tag {
     display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
 
     padding: 4px 8px;
 
@@ -455,9 +581,9 @@ body {
 }
 
 
-/* =========================
+/* =========================================================
    案場
-========================= */
+   ========================================================= */
 
 .project-toolbar {
     display: flex;
@@ -486,10 +612,21 @@ body {
     padding: 18px;
 
     min-width: 0;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.project-card:hover {
+    border-color: #d8dee8;
+
+    box-shadow:
+        0 4px 14px rgba(15, 23, 42, 0.04);
 }
 
 .project-card.archived {
-    opacity: .7;
+    opacity: 0.7;
 }
 
 .project-head {
@@ -512,6 +649,8 @@ body {
     margin: 0;
 
     overflow-wrap: anywhere;
+
+    line-height: 1.35;
 }
 
 .project-info {
@@ -552,12 +691,16 @@ body {
     height: 100%;
 
     background: #172033;
+
+    border-radius: 20px;
+
+    transition: width 0.2s ease;
 }
 
 
-/* =========================
+/* =========================================================
    行事曆
-========================= */
+   ========================================================= */
 
 .calendar {
     display: grid;
@@ -585,6 +728,8 @@ body {
     font-size: 12px;
 
     color: #6b7280;
+
+    border-right: 1px solid #edf0f4;
 }
 
 .day {
@@ -599,12 +744,20 @@ body {
     padding: 8px;
 
     min-width: 0;
+
+    background: white;
+}
+
+.day:nth-child(7n) {
+    border-right: 0;
 }
 
 .day-num {
     font-size: 12px;
 
     color: #6b7280;
+
+    font-weight: 600;
 }
 
 .event {
@@ -625,6 +778,18 @@ body {
     white-space: nowrap;
 
     text-overflow: ellipsis;
+
+    transition:
+        opacity 0.15s ease,
+        transform 0.1s ease;
+}
+
+.event:hover {
+    opacity: 0.85;
+}
+
+.event:active {
+    transform: scale(0.98);
 }
 
 .event.red {
@@ -652,16 +817,16 @@ body {
 }
 
 
-/* =========================
+/* =========================================================
    彈窗
-========================= */
+   ========================================================= */
 
 .modal-backdrop {
     position: fixed;
 
     inset: 0;
 
-    background: #0007;
+    background: rgba(0, 0, 0, 0.47);
 
     display: grid;
 
@@ -688,6 +853,9 @@ body {
     border-radius: 15px;
 
     padding: 22px;
+
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
 .modal-head {
@@ -698,10 +866,14 @@ body {
     align-items: center;
 
     gap: 10px;
+
+    margin-bottom: 5px;
 }
 
 .modal-head h2 {
     margin: 0;
+
+    font-size: 20px;
 }
 
 .icon-btn {
@@ -709,9 +881,21 @@ body {
 
     background: transparent;
 
+    color: #4b5563;
+
     font-size: 25px;
 
+    line-height: 1;
+
     cursor: pointer;
+
+    padding: 4px 8px;
+
+    border-radius: 7px;
+}
+
+.icon-btn:hover {
+    background: #f3f4f6;
 }
 
 .modal label {
@@ -743,6 +927,31 @@ body {
     font: inherit;
 
     max-width: 100%;
+
+    background: white;
+
+    color: #172033;
+
+    outline: none;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.modal input:focus,
+.modal select:focus,
+.modal textarea:focus {
+    border-color: #9aa6b8;
+
+    box-shadow:
+        0 0 0 3px rgba(23, 32, 51, 0.06);
+}
+
+.modal textarea {
+    resize: vertical;
+
+    min-height: 90px;
 }
 
 .form-grid {
@@ -765,9 +974,9 @@ body {
 }
 
 
-/* =========================
-   空白
-========================= */
+/* =========================================================
+   空白狀態
+   ========================================================= */
 
 .empty {
     padding: 35px;
@@ -775,12 +984,14 @@ body {
     text-align: center;
 
     color: #8a93a2;
+
+    font-size: 13px;
 }
 
 
-/* =========================
+/* =========================================================
    Toast
-========================= */
+   ========================================================= */
 
 .toast {
     position: fixed;
@@ -801,9 +1012,17 @@ body {
 
     transform: translateY(10px);
 
-    transition: .2s;
+    pointer-events: none;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
 
     z-index: 200;
+
+    max-width: calc(100vw - 40px);
+
+    font-size: 13px;
 }
 
 .toast.show {
@@ -813,10 +1032,35 @@ body {
 }
 
 
-/* =====================================================
+/* =========================================================
+   滾動條
+   ========================================================= */
+
+::-webkit-scrollbar {
+    width: 8px;
+
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+
+/* =========================================================
    手機版
    768px 以下
-===================================================== */
+   ========================================================= */
 
 @media screen and (max-width: 768px) {
 
@@ -824,9 +1068,10 @@ body {
         padding-bottom: 68px;
     }
 
+
     /* -------------------------
        側邊欄改成上方橫向區域
-    ------------------------- */
+       ------------------------- */
 
     .sidebar {
         position: fixed;
@@ -853,6 +1098,7 @@ body {
         overflow: hidden;
     }
 
+
     .brand {
         padding: 0;
 
@@ -861,8 +1107,10 @@ body {
         flex-shrink: 0;
     }
 
+
     .logo {
         width: 40px;
+
         height: 40px;
 
         border-radius: 10px;
@@ -870,9 +1118,11 @@ body {
         font-size: 22px;
     }
 
+
     .brand strong {
         font-size: 16px;
     }
+
 
     .brand span {
         font-size: 9px;
@@ -880,12 +1130,15 @@ body {
         margin-top: 1px;
     }
 
+
     /* -------------------------
-       手機選單變成橫向滑動
-    ------------------------- */
+       手機選單橫向滑動
+       ------------------------- */
 
     .sidebar nav {
         display: flex;
+
+        flex-direction: row;
 
         align-items: center;
 
@@ -905,6 +1158,7 @@ body {
     .sidebar nav::-webkit-scrollbar {
         display: none;
     }
+
 
     .nav-item {
         flex: 0 0 auto;
@@ -928,17 +1182,19 @@ body {
         white-space: nowrap;
     }
 
+
     /* -------------------------
-       快速新增隱藏到主畫面按鈕
-    ------------------------- */
+       快速新增
+       ------------------------- */
 
     .sidebar-bottom {
         display: none;
     }
 
+
     /* -------------------------
        主畫面
-    ------------------------- */
+       ------------------------- */
 
     .main {
         margin-left: 0;
@@ -953,6 +1209,7 @@ body {
         min-height: 100vh;
     }
 
+
     .topbar {
         flex-direction: column;
 
@@ -963,9 +1220,11 @@ body {
         margin-bottom: 18px;
     }
 
+
     .topbar h1 {
         font-size: 23px;
     }
+
 
     .top-actions {
         width: 100%;
@@ -975,6 +1234,7 @@ body {
         gap: 8px;
     }
 
+
     .search {
         flex: 1;
 
@@ -983,13 +1243,15 @@ body {
         min-width: 0;
     }
 
+
     .top-actions .btn {
         flex-shrink: 0;
     }
 
+
     /* -------------------------
        統計卡片
-    ------------------------- */
+       ------------------------- */
 
     .stats {
         grid-template-columns:
@@ -998,29 +1260,34 @@ body {
         gap: 10px;
     }
 
+
     .stat {
         padding: 14px;
     }
+
 
     .stat-value {
         font-size: 23px;
     }
 
+
     /* -------------------------
        雙欄改單欄
-    ------------------------- */
+       ------------------------- */
 
     .two-col {
         grid-template-columns: 1fr;
     }
 
+
     /* -------------------------
        案場改單欄
-    ------------------------- */
+       ------------------------- */
 
     .project-grid {
         grid-template-columns: 1fr;
     }
+
 
     .project-toolbar {
         flex-direction: column;
@@ -1030,13 +1297,15 @@ body {
         gap: 10px;
     }
 
+
     .project-toolbar .btn {
         width: 100%;
     }
 
+
     /* -------------------------
        工作列表
-    ------------------------- */
+       ------------------------- */
 
     .list-row {
         flex-direction: column;
@@ -1046,16 +1315,17 @@ body {
         gap: 10px;
     }
 
+
     .row-actions {
         width: 100%;
 
         justify-content: flex-start;
     }
 
+
     /* -------------------------
        行事曆
-       手機可以左右滑
-    ------------------------- */
+       ------------------------- */
 
     .calendar {
         display: grid;
@@ -1068,19 +1338,24 @@ body {
         min-width: 700px;
     }
 
-    /* 如果外層卡片太小，允許行事曆水平滑動 */
 
-    .calendar {
-        overflow: visible;
+    /* 讓行事曆可以水平滑動 */
+
+    #app {
+        min-width: 0;
+
+        overflow-x: auto;
     }
+
 
     /* -------------------------
        表單
-    ------------------------- */
+       ------------------------- */
 
     .form-grid {
         grid-template-columns: 1fr;
     }
+
 
     input,
     select,
@@ -1089,13 +1364,15 @@ body {
         font-size: 16px;
     }
 
+
     /* -------------------------
        彈窗
-    ------------------------- */
+       ------------------------- */
 
     .modal-backdrop {
         padding: 10px;
     }
+
 
     .modal {
         width: 100%;
@@ -1107,9 +1384,11 @@ body {
         border-radius: 13px;
     }
 
+
     .modal-actions {
         flex-wrap: wrap;
     }
+
 
     .modal-actions .btn {
         flex: 1;
@@ -1117,9 +1396,10 @@ body {
         min-width: 100px;
     }
 
+
     /* -------------------------
        Toast
-    ------------------------- */
+       ------------------------- */
 
     .toast {
         left: 10px;
@@ -1129,13 +1409,16 @@ body {
         bottom: 78px;
 
         text-align: center;
+
+        max-width: none;
     }
 }
 
 
-/* =====================================================
+/* =========================================================
    小手機
-===================================================== */
+   480px 以下
+   ========================================================= */
 
 @media screen and (max-width: 480px) {
 
@@ -1147,9 +1430,11 @@ body {
             7px;
     }
 
+
     .brand {
         gap: 5px;
     }
+
 
     .logo {
         width: 38px;
@@ -1159,17 +1444,21 @@ body {
         font-size: 20px;
     }
 
+
     .brand strong {
         font-size: 14px;
     }
+
 
     .brand span {
         font-size: 8px;
     }
 
+
     .sidebar nav {
         margin-left: 5px;
     }
+
 
     .nav-item {
         min-width: 42px;
@@ -1183,6 +1472,7 @@ body {
         font-size: 10px;
     }
 
+
     .main {
         padding:
             70px
@@ -1190,13 +1480,16 @@ body {
             15px;
     }
 
+
     .topbar h1 {
         font-size: 21px;
     }
 
+
     .top-actions {
         flex-wrap: wrap;
     }
+
 
     .search {
         flex-basis: 100%;
@@ -1204,9 +1497,11 @@ body {
         width: 100%;
     }
 
+
     .top-actions .btn {
         flex: 1;
     }
+
 
     .stats {
         grid-template-columns:
@@ -1215,22 +1510,27 @@ body {
         gap: 8px;
     }
 
+
     .stat {
         padding: 12px;
     }
 
+
     .stat-value {
         font-size: 21px;
     }
+
 
     .card,
     .project-card {
         padding: 14px;
     }
 
+
     .project-actions {
         flex-wrap: wrap;
     }
+
 
     .toast {
         bottom: 70px;
@@ -1238,9 +1538,10 @@ body {
 }
 
 
-/* =====================================================
+/* =========================================================
    超小手機
-===================================================== */
+   360px 以下
+   ========================================================= */
 
 @media screen and (max-width: 360px) {
 
@@ -1248,13 +1549,16 @@ body {
         display: none;
     }
 
+
     .brand strong {
         font-size: 13px;
     }
 
+
     .sidebar nav {
         margin-left: 3px;
     }
+
 
     .nav-item {
         min-width: 38px;
@@ -1266,6 +1570,7 @@ body {
         font-size: 9px;
     }
 
+
     .main {
         padding:
             68px
@@ -1273,11 +1578,59 @@ body {
             12px;
     }
 
+
     .topbar h1 {
         font-size: 19px;
     }
 
+
     .stats {
         grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================================================
+   觸控裝置優化
+   ========================================================= */
+
+@media (hover: none) and (pointer: coarse) {
+
+    .nav-item,
+    .btn,
+    .mini-btn,
+    .quick-add,
+    .icon-btn {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mini-btn {
+        min-height: 38px;
+    }
+
+    .btn {
+        min-height: 42px;
+    }
+}
+
+
+/* =========================================================
+   安全區域
+   適合 iPhone / 部分瀏海手機
+   ========================================================= */
+
+@supports (padding: env(safe-area-inset-top)) {
+
+    @media screen and (max-width: 768px) {
+
+        .sidebar {
+            padding-top:
+                calc(7px + env(safe-area-inset-top));
+        }
+
+        .main {
+            padding-top:
+                calc(78px + env(safe-area-inset-top));
+        }
     }
 }

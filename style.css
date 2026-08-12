@@ -1,12 +1,11 @@
 /* =========================================================
-   YAO V5
-   消防工程行政管理系統
-   style.css
+YAO V5
+消防工程行政管理系統
+style.css
 ========================================================= */
 
-
 /* =========================================================
-   基礎設定
+基礎設定
 ========================================================= */
 
 * {
@@ -35,18 +34,15 @@ body {
 
     background: #f5f7fa;
     color: #172033;
-
     line-height: 1.5;
 }
 
-
 /* =========================================================
-   左側選單｜電腦版
+左側選單｜電腦版
 ========================================================= */
 
 .sidebar {
     position: fixed;
-
     top: 0;
     bottom: 0;
     left: 0;
@@ -66,22 +62,17 @@ body {
 
 .brand {
     display: flex;
-
     gap: 11px;
-
     align-items: center;
-
     padding: 4px 8px 28px;
 }
 
 .logo {
     width: 44px;
     height: 44px;
-
     flex-shrink: 0;
 
     border-radius: 12px;
-
     background: white;
 
     display: grid;
@@ -92,18 +83,14 @@ body {
 
 .brand strong {
     display: block;
-
     font-size: 20px;
     line-height: 1.2;
 }
 
 .brand span {
     display: block;
-
     color: #9ca3af;
-
     font-size: 11px;
-
     margin-top: 3px;
 }
 
@@ -116,7 +103,6 @@ body {
     width: 100%;
 
     border: 0;
-
     background: transparent;
 
     color: #cbd5e1;
@@ -197,9 +183,8 @@ body {
     margin-top: 12px;
 }
 
-
 /* =========================================================
-   主畫面
+主畫面
 ========================================================= */
 
 .main {
@@ -281,9 +266,8 @@ body {
         0 0 0 3px rgba(23, 32, 51, 0.06);
 }
 
-
 /* =========================================================
-   按鈕
+按鈕
 ========================================================= */
 
 .btn {
@@ -378,9 +362,8 @@ body {
     color: #92400e;
 }
 
-
 /* =========================================================
-   通用
+通用
 ========================================================= */
 
 .grid {
@@ -450,9 +433,8 @@ body {
     margin-top: -5px;
 }
 
-
 /* =========================================================
-   資料列表
+資料列表
 ========================================================= */
 
 .list {
@@ -581,9 +563,8 @@ body {
     color: #4b5563;
 }
 
-
 /* =========================================================
-   案場
+案場
 ========================================================= */
 
 .project-toolbar {
@@ -698,9 +679,8 @@ body {
     transition: width 0.2s ease;
 }
 
-
 /* =========================================================
-   行事曆｜月份控制區
+行事曆｜月份控制區
 ========================================================= */
 
 .calendar-wrapper {
@@ -829,9 +809,8 @@ body {
     border-color: #cbd5e1;
 }
 
-
 /* =========================================================
-   行事曆｜本體
+行事曆｜本體
 ========================================================= */
 
 .calendar-scroll {
@@ -892,6 +871,11 @@ body {
     border-right: 0;
 }
 
+/* =========================================================
+★ 行事曆日期格
+★ 這裡是這次修正的重點
+========================================================= */
+
 .day {
     min-height: 125px;
 
@@ -911,6 +895,9 @@ body {
 
     transition:
         background 0.15s ease;
+
+    /* 防止內容互相擠壓 */
+    overflow: hidden;
 }
 
 .day:hover {
@@ -921,18 +908,23 @@ body {
     border-right: 0;
 }
 
+/* =========================================================
+★ 日期數字
+★ 改成獨立一整行
+========================================================= */
+
 .day-num {
-    display: inline-flex;
+    display: flex;
 
     align-items: center;
 
     justify-content: center;
 
-    min-width: 27px;
+    width: 27px;
 
     height: 27px;
 
-    padding: 0 5px;
+    padding: 0;
 
     font-size: 12px;
 
@@ -941,6 +933,9 @@ body {
     font-weight: 700;
 
     border-radius: 50%;
+
+    /* ★ 重要：日期一定獨立佔一行 */
+    margin-bottom: 4px;
 }
 
 .day.today {
@@ -959,7 +954,16 @@ body {
     opacity: 0.55;
 }
 
+/* =========================================================
+★ 行程
+★ 日期下面開始顯示
+========================================================= */
+
 .event {
+    display: block;
+
+    width: 100%;
+
     font-size: 11px;
 
     padding: 5px 6px;
@@ -968,7 +972,7 @@ body {
 
     background: #eef2f7;
 
-    margin-top: 6px;
+    margin-top: 5px;
 
     cursor: pointer;
 
@@ -981,6 +985,9 @@ body {
     transition:
         opacity 0.15s ease,
         transform 0.1s ease;
+
+    /* ★ 確保行程不會跑到日期旁邊 */
+    clear: both;
 }
 
 .event:hover {
@@ -1021,9 +1028,16 @@ body {
     color: #4b5563;
 }
 
+/* =========================================================
+★ 行事曆事件內容區
+========================================================= */
+
+.day .event:first-of-type {
+    margin-top: 4px;
+}
 
 /* =========================================================
-   行事曆｜沒有資料
+行事曆｜沒有資料
 ========================================================= */
 
 .calendar-empty {
@@ -1036,9 +1050,8 @@ body {
     font-size: 13px;
 }
 
-
 /* =========================================================
-   彈窗
+彈窗
 ========================================================= */
 
 .modal-backdrop {
@@ -1193,9 +1206,8 @@ body {
     margin-top: 18px;
 }
 
-
 /* =========================================================
-   空白狀態
+空白狀態
 ========================================================= */
 
 .empty {
@@ -1208,9 +1220,8 @@ body {
     font-size: 13px;
 }
 
-
 /* =========================================================
-   Loading
+Loading
 ========================================================= */
 
 .loading-card {
@@ -1226,9 +1237,8 @@ body {
     margin-bottom: 10px;
 }
 
-
 /* =========================================================
-   Toast
+Toast
 ========================================================= */
 
 .toast {
@@ -1270,9 +1280,8 @@ body {
     transform: none;
 }
 
-
 /* =========================================================
-   滾動條
+滾動條
 ========================================================= */
 
 ::-webkit-scrollbar {
@@ -1295,10 +1304,9 @@ body {
     background: #94a3b8;
 }
 
-
 /* =========================================================
-   平板 / 手機
-   768px 以下
+平板 / 手機
+768px 以下
 ========================================================= */
 
 @media screen and (max-width: 768px) {
@@ -1306,7 +1314,6 @@ body {
     body {
         padding-bottom: 20px;
     }
-
 
     /* -------------------------
        頂部導航
@@ -1337,7 +1344,6 @@ body {
         overflow: hidden;
     }
 
-
     .brand {
         padding: 0;
 
@@ -1345,7 +1351,6 @@ body {
 
         flex-shrink: 0;
     }
-
 
     .logo {
         width: 40px;
@@ -1357,18 +1362,15 @@ body {
         font-size: 22px;
     }
 
-
     .brand strong {
         font-size: 16px;
     }
-
 
     .brand span {
         font-size: 9px;
 
         margin-top: 1px;
     }
-
 
     /* -------------------------
        手機選單橫向滑動
@@ -1398,7 +1400,6 @@ body {
         display: none;
     }
 
-
     .nav-item {
         flex: 0 0 auto;
 
@@ -1421,7 +1422,6 @@ body {
         white-space: nowrap;
     }
 
-
     /* -------------------------
        底部選單
     ------------------------- */
@@ -1429,7 +1429,6 @@ body {
     .sidebar-bottom {
         display: none;
     }
-
 
     /* -------------------------
        主畫面
@@ -1448,7 +1447,6 @@ body {
         min-height: 100vh;
     }
 
-
     .topbar {
         flex-direction: column;
 
@@ -1459,11 +1457,9 @@ body {
         margin-bottom: 18px;
     }
 
-
     .topbar h1 {
         font-size: 23px;
     }
-
 
     .top-actions {
         width: 100%;
@@ -1473,7 +1469,6 @@ body {
         gap: 8px;
     }
 
-
     .search {
         flex: 1;
 
@@ -1482,11 +1477,9 @@ body {
         min-width: 0;
     }
 
-
     .top-actions .btn {
         flex-shrink: 0;
     }
-
 
     /* -------------------------
        統計卡片
@@ -1499,16 +1492,13 @@ body {
         gap: 10px;
     }
 
-
     .stat {
         padding: 14px;
     }
 
-
     .stat-value {
         font-size: 23px;
     }
-
 
     /* -------------------------
        雙欄改單欄
@@ -1518,7 +1508,6 @@ body {
         grid-template-columns: 1fr;
     }
 
-
     /* -------------------------
        案場
     ------------------------- */
@@ -1526,7 +1515,6 @@ body {
     .project-grid {
         grid-template-columns: 1fr;
     }
-
 
     .project-toolbar {
         flex-direction: column;
@@ -1536,11 +1524,9 @@ body {
         gap: 10px;
     }
 
-
     .project-toolbar .btn {
         width: 100%;
     }
-
 
     /* -------------------------
        工作列表
@@ -1554,13 +1540,11 @@ body {
         gap: 10px;
     }
 
-
     .row-actions {
         width: 100%;
 
         justify-content: flex-start;
     }
-
 
     /* -------------------------
        行事曆
@@ -1572,13 +1556,11 @@ body {
         overflow: hidden;
     }
 
-
     .calendar-toolbar {
         padding: 10px;
 
         gap: 8px;
     }
-
 
     .calendar-month-title {
         font-size: 17px;
@@ -1586,13 +1568,11 @@ body {
         white-space: nowrap;
     }
 
-
     .calendar-nav-btn {
         width: 38px;
 
         height: 38px;
     }
-
 
     .calendar-today-btn {
         padding:
@@ -1601,7 +1581,6 @@ body {
         font-size: 11px;
     }
 
-
     .calendar-scroll {
         overflow-x: auto;
 
@@ -1609,7 +1588,6 @@ body {
 
         padding-bottom: 4px;
     }
-
 
     .calendar {
         grid-template-columns:
@@ -1620,13 +1598,11 @@ body {
         min-width: 700px;
     }
 
-
     .day {
         min-height: 115px;
 
         padding: 7px;
     }
-
 
     .event {
         font-size: 10px;
@@ -1634,7 +1610,6 @@ body {
         padding:
             5px 5px;
     }
-
 
     /* -------------------------
        表單
@@ -1644,14 +1619,12 @@ body {
         grid-template-columns: 1fr;
     }
 
-
     input,
     select,
     textarea,
     button {
         font-size: 16px;
     }
-
 
     /* -------------------------
        彈窗
@@ -1660,7 +1633,6 @@ body {
     .modal-backdrop {
         padding: 10px;
     }
-
 
     .modal {
         width: 100%;
@@ -1672,18 +1644,15 @@ body {
         border-radius: 13px;
     }
 
-
     .modal-actions {
         flex-wrap: wrap;
     }
-
 
     .modal-actions .btn {
         flex: 1;
 
         min-width: 100px;
     }
-
 
     /* -------------------------
        Toast
@@ -1702,10 +1671,9 @@ body {
     }
 }
 
-
 /* =========================================================
-   小手機
-   480px 以下
+小手機
+480px 以下
 ========================================================= */
 
 @media screen and (max-width: 480px) {
@@ -1718,11 +1686,9 @@ body {
             7px;
     }
 
-
     .brand {
         gap: 5px;
     }
-
 
     .logo {
         width: 38px;
@@ -1732,21 +1698,17 @@ body {
         font-size: 20px;
     }
 
-
     .brand strong {
         font-size: 14px;
     }
-
 
     .brand span {
         font-size: 8px;
     }
 
-
     .sidebar nav {
         margin-left: 5px;
     }
-
 
     .nav-item {
         min-width: 42px;
@@ -1760,7 +1722,6 @@ body {
         font-size: 10px;
     }
 
-
     .main {
         padding:
             70px
@@ -1768,16 +1729,13 @@ body {
             15px;
     }
 
-
     .topbar h1 {
         font-size: 21px;
     }
 
-
     .top-actions {
         flex-wrap: wrap;
     }
-
 
     .search {
         flex-basis: 100%;
@@ -1785,11 +1743,9 @@ body {
         width: 100%;
     }
 
-
     .top-actions .btn {
         flex: 1;
     }
-
 
     .stats {
         grid-template-columns:
@@ -1798,27 +1754,22 @@ body {
         gap: 8px;
     }
 
-
     .stat {
         padding: 12px;
     }
 
-
     .stat-value {
         font-size: 21px;
     }
-
 
     .card,
     .project-card {
         padding: 14px;
     }
 
-
     .project-actions {
         flex-wrap: wrap;
     }
-
 
     /* -------------------------
        小手機行事曆
@@ -1837,21 +1788,17 @@ body {
         gap: 5px;
     }
 
-
     .calendar-month-title {
         font-size: 16px;
     }
-
 
     .calendar-month-title span {
         font-size: 9px;
     }
 
-
     .calendar-nav {
         display: contents;
     }
-
 
     .calendar-nav-btn {
         width: 36px;
@@ -1860,7 +1807,6 @@ body {
 
         font-size: 15px;
     }
-
 
     .calendar-today-btn {
         grid-column:
@@ -1871,7 +1817,6 @@ body {
         margin-top: 4px;
     }
 
-
     .calendar {
         grid-template-columns:
             repeat(7, 95px);
@@ -1881,21 +1826,18 @@ body {
         min-width: 665px;
     }
 
-
     .day {
         min-height: 105px;
     }
-
 
     .toast {
         bottom: 70px;
     }
 }
 
-
 /* =========================================================
-   超小手機
-   360px 以下
+超小手機
+360px 以下
 ========================================================= */
 
 @media screen and (max-width: 360px) {
@@ -1904,16 +1846,13 @@ body {
         display: none;
     }
 
-
     .brand strong {
         font-size: 13px;
     }
 
-
     .sidebar nav {
         margin-left: 3px;
     }
-
 
     .nav-item {
         min-width: 38px;
@@ -1925,7 +1864,6 @@ body {
         font-size: 9px;
     }
 
-
     .main {
         padding:
             68px
@@ -1933,16 +1871,13 @@ body {
             12px;
     }
 
-
     .topbar h1 {
         font-size: 19px;
     }
 
-
     .stats {
         grid-template-columns: 1fr;
     }
-
 
     /* -------------------------
        超小手機行事曆
@@ -1951,7 +1886,6 @@ body {
     .calendar-month-title {
         font-size: 15px;
     }
-
 
     .calendar {
         grid-template-columns:
@@ -1962,24 +1896,21 @@ body {
         min-width: 630px;
     }
 
-
     .day {
         min-height: 100px;
 
         padding: 6px;
     }
 
-
     .day-num {
-        min-width: 25px;
+        width: 25px;
 
         height: 25px;
     }
 }
 
-
 /* =========================================================
-   觸控裝置優化
+觸控裝置優化
 ========================================================= */
 
 @media (hover: none) and (pointer: coarse) {
@@ -1994,16 +1925,13 @@ body {
         -webkit-tap-highlight-color: transparent;
     }
 
-
     .mini-btn {
         min-height: 38px;
     }
 
-
     .btn {
         min-height: 42px;
     }
-
 
     .calendar-nav-btn {
         min-width: 38px;
@@ -2012,10 +1940,9 @@ body {
     }
 }
 
-
 /* =========================================================
-   安全區域
-   適合 iPhone / 部分瀏海手機
+安全區域
+適合 iPhone / 部分瀏海手機
 ========================================================= */
 
 @supports (padding: env(safe-area-inset-top)) {
@@ -2030,7 +1957,6 @@ body {
                 );
         }
 
-
         .main {
             padding-top:
                 calc(
@@ -2041,9 +1967,8 @@ body {
     }
 }
 
-
 /* =========================================================
-   行事曆手機安全區域
+行事曆手機安全區域
 ========================================================= */
 
 @supports (padding: env(safe-area-inset-bottom)) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-v5";
+const CACHE_NAME = "yao-v6";
 
 const FILES_TO_CACHE = [
     "./",
@@ -29,7 +29,7 @@ self.addEventListener("install", event => {
 
 /* =========================
    啟用新版
-   清除舊快取
+   清除所有舊快取
 ========================= */
 
 self.addEventListener("activate", event => {
@@ -57,10 +57,18 @@ self.addEventListener("activate", event => {
 
 /* =========================
    網路優先
-   網路成功就使用最新版本
 ========================= */
 
 self.addEventListener("fetch", event => {
+
+    /*
+     * 只處理 GET
+     */
+
+    if (event.request.method !== "GET") {
+        return;
+    }
+
 
     event.respondWith(
 
@@ -69,12 +77,13 @@ self.addEventListener("fetch", event => {
 
                 /*
                  * 網路成功
-                 * 直接使用最新檔案
+                 * 使用最新版本
                  */
 
                 if (
                     response &&
-                    response.status === 200
+                    response.status === 200 &&
+                    response.type === "basic"
                 ) {
 
                     const responseClone = response.clone();
@@ -98,8 +107,7 @@ self.addEventListener("fetch", event => {
             .catch(() => {
 
                 /*
-                 * 網路失敗
-                 * 才使用快取
+                 * 沒網路時才使用快取
                  */
 
                 return caches.match(event.request);

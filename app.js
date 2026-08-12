@@ -5,6 +5,7 @@ Firebase 雲端版
 app.js
 ========================================================= */
 
+
 /* =========================================================
 Firebase SDK
 ========================================================= */
@@ -27,9 +28,7 @@ import {
     addDoc,
     updateDoc,
     deleteDoc,
-    onSnapshot,
-    getDocs,
-    writeBatch
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 
@@ -224,6 +223,7 @@ function esc(text = "") {
 
         }
     );
+
 }
 
 
@@ -254,6 +254,7 @@ function toast(message) {
         },
         1800
     );
+
 }
 
 
@@ -269,6 +270,7 @@ function userCollection(name) {
         currentUser.uid,
         name
     );
+
 }
 
 
@@ -727,7 +729,7 @@ function render() {
 
         records: "工作紀錄",
 
-        backup: "資料備份"
+        reminders: "提醒中心"
 
     };
 
@@ -840,9 +842,9 @@ function render() {
 
     if (
         currentPage ===
-        "backup"
+        "reminders"
     )
-        renderBackup();
+        renderReminders();
 
 }
 
@@ -1855,6 +1857,20 @@ function openItemModal(
         ).value =
             item.reminder || "none";
 
+
+        const oneHour =
+            document.querySelector(
+                "#itemOneHourReminder"
+            );
+
+
+        if (oneHour) {
+
+            oneHour.checked =
+                item.reminderOneHour === true;
+
+        }
+
     }
 
     else {
@@ -1883,6 +1899,20 @@ function openItemModal(
             "#itemDate"
         ).value =
             isoToday;
+
+
+        const oneHour =
+            document.querySelector(
+                "#itemOneHourReminder"
+            );
+
+
+        if (oneHour) {
+
+            oneHour.checked =
+                false;
+
+        }
 
     }
 
@@ -2420,7 +2450,6 @@ function goCalendarToday() {
 
 /* =========================================================
 行事曆
-修正版：日期與筆數完全分開
 ========================================================= */
 
 function renderCalendar(data) {
@@ -2819,6 +2848,580 @@ function renderCalendar(data) {
 
 
 /* =========================================================
+提醒工具
+========================================================= */
+
+/*
+ * 取得工作的實際提醒時間
+ *
+ * 第一階段：
+ * 日期 - 提前天數
+ * 時間 = 工作時間
+ *
+ * 第二階段：
+ * 工作當天
+ * 時間 = 工作時間 - 1 小時
+ */
+
+function getReminderTimes(item) {
+
+    const result = [];
+
+    if (!item || !item.date)
+        return result;
+
+
+    const workTime =
+        item.time || "09:00";
+
+
+    const reminderBefore =
+        item.reminder || "none";
+
+
+    if (
+        reminderBefore !== "none"
+    ) {
+
+        const days =
+            parseInt(
+                reminderBefore,
+                10
+            );
+
+
+        if (
+            !isNaN(days) &&
+            days > 0
+        ) {
+
+            result.push({
+
+                stage: 1,
+
+                date:
+                    addDaysFromISO(
+                        item.date,
+                        -days
+                    ),
+
+                time:
+                    workTime,
+
+                label:
+                    `提前 ${days} 天`
+
+            });
+
+        }
+
+    }
+
+
+    if (
+        item.reminderOneHour === true
+    ) {
+
+        const oneHour =
+            subtractOneHour(
+                item.date,
+                workTime
+            );
+
+
+        result.push({
+
+            stage: 2,
+
+            date:
+                oneHour.date,
+
+            time:
+                oneHour.time,
+
+            label:
+                "提前 1 小時"
+
+        });
+
+    }
+
+
+    return result;
+
+}
+
+
+/* =========================================================
+指定日期加減天數
+========================================================= */
+
+function addDaysFromISO(
+    isoDate,
+    amount
+) {
+
+    const parts =
+        String(isoDate)
+            .split("-")
+            .map(Number);
+
+
+    if (
+        parts.length !== 3 ||
+        parts.some(
+            Number.isNaN
+        )
+    ) {
+
+        return isoDate;
+
+    }
+
+
+    const date =
+        new Date(
+            parts[0],
+            parts[1] - 1,
+            parts[2]
+        );
+
+
+    date.setDate(
+        date.getDate() + amount
+    );
+
+
+    return `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+    ).padStart(2, "0")}-${String(
+        date.getDate()
+    ).padStart(2, "0")}`;
+
+}
+
+
+/* =========================================================
+扣除一小時
+========================================================= */
+
+function subtractOneHour(
+    isoDate,
+    time
+) {
+
+    const safeTime =
+        time || "09:00";
+
+
+    const parts =
+        safeTime
+            .split(":")
+            .map(Number);
+
+
+    let hour =
+        Number.isFinite(parts[0])
+        ?
+        parts[0]
+        :
+        9;
+
+
+    let minute =
+        Number.isFinite(parts[1])
+        ?
+        parts[1]
+        :
+        0;
+
+
+    let date =
+        isoDate;
+
+
+    minute -= 60;
+
+
+    if (minute < 0) {
+
+        minute += 60;
+
+        hour -= 1;
+
+    }
+
+
+    if (hour < 0) {
+
+        hour += 24;
+
+        date =
+            addDaysFromISO(
+                isoDate,
+                -1
+            );
+
+    }
+
+
+    return {
+
+        date,
+
+        time:
+            `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+
+    };
+
+}
+
+
+/* =========================================================
+建立提醒項目
+========================================================= */
+
+function buildReminderRows() {
+
+    const rows = [];
+
+
+    items.forEach(
+        item => {
+
+            if (
+                item.done ||
+                !item.date
+            )
+                return;
+
+
+            const project =
+                getProject(
+                    item.projectId
+                );
+
+
+            const reminderTimes =
+                getReminderTimes(
+                    item
+                );
+
+
+            reminderTimes.forEach(
+                reminder => {
+
+                    rows.push({
+
+                        item,
+
+                        project,
+
+                        ...reminder
+
+                    });
+
+                }
+            );
+
+        }
+    );
+
+
+    rows.sort(
+        (a, b) => {
+
+            const aKey =
+                `${a.date} ${a.time}`;
+
+            const bKey =
+                `${b.date} ${b.time}`;
+
+            return aKey.localeCompare(
+                bKey
+            );
+
+        }
+    );
+
+
+    return rows;
+
+}
+
+
+/* =========================================================
+提醒中心
+========================================================= */
+
+function renderReminders() {
+
+    const rows =
+        buildReminderRows();
+
+
+    const todayRows =
+        rows.filter(
+            row =>
+                row.date ===
+                isoToday
+        );
+
+
+    const futureRows =
+        rows.filter(
+            row =>
+                row.date >
+                isoToday
+        );
+
+
+    const overdueRows =
+        rows.filter(
+            row =>
+                row.date <
+                isoToday
+        );
+
+
+    app.innerHTML = `
+
+        <div class="project-toolbar">
+
+            <div>
+
+                <strong>
+                    🔔 提醒中心
+                </strong>
+
+                <div class="muted">
+                    集中查看目前需要注意的工作提醒
+                </div>
+
+            </div>
+
+        </div>
+
+
+        ${
+            todayRows.length
+            ?
+            `
+
+            <div class="card">
+
+                <h3>
+                    🔴 今天提醒
+                </h3>
+
+                <div class="list">
+
+                    ${
+                        todayRows
+                            .map(
+                                reminderRow
+                            )
+                            .join("")
+                    }
+
+                </div>
+
+            </div>
+
+            `
+            :
+            `
+            <div class="card">
+
+                <h3>
+                    今天提醒
+                </h3>
+
+                <div class="empty">
+                    今天目前沒有提醒
+                </div>
+
+            </div>
+            `
+        }
+
+
+        <div
+            class="card"
+            style="margin-top:16px"
+        >
+
+            <h3>
+                📅 即將提醒
+            </h3>
+
+            <div class="list">
+
+                ${
+                    futureRows.length
+                    ?
+                    futureRows
+                        .slice(0, 30)
+                        .map(
+                            reminderRow
+                        )
+                        .join("")
+                    :
+                    `
+                    <div class="empty">
+                        目前沒有即將到期的提醒
+                    </div>
+                    `
+                }
+
+            </div>
+
+        </div>
+
+
+        ${
+            overdueRows.length
+            ?
+            `
+
+            <div
+                class="card"
+                style="margin-top:16px"
+            >
+
+                <h3>
+                    ⚠️ 已經過提醒時間
+                </h3>
+
+                <div class="list">
+
+                    ${
+                        overdueRows
+                            .slice(-20)
+                            .map(
+                                reminderRow
+                            )
+                            .join("")
+                    }
+
+                </div>
+
+            </div>
+
+            `
+            :
+            ""
+        }
+
+    `;
+
+}
+
+
+/* =========================================================
+提醒資料列
+========================================================= */
+
+function reminderRow(row) {
+
+    const item =
+        row.item;
+
+
+    const project =
+        row.project;
+
+
+    if (!project)
+        return "";
+
+
+    const isToday =
+        row.date ===
+        isoToday;
+
+
+    const dateText =
+        isToday
+        ?
+        "今天"
+        :
+        formatDate(
+            row.date
+        );
+
+
+    return `
+
+        <div class="list-row">
+
+            <div class="list-main">
+
+                <strong>
+
+                    ${
+                        row.stage === 2
+                        ?
+                        "⏰ "
+                        :
+                        "🔔 "
+                    }
+
+                    ${esc(item.title)}
+
+                </strong>
+
+                <span>
+
+                    ${esc(project.code)}
+                    ｜${esc(project.name)}
+
+                    ・
+
+                    ${dateText}
+
+                    ${esc(row.time)}
+
+                    ・
+
+                    ${esc(row.label)}
+
+                </span>
+
+            </div>
+
+
+            <div class="row-actions">
+
+                <span
+                    class="
+                        tag
+                        ${row.stage === 2
+                            ? "orange"
+                            : "blue"}
+                    "
+                >
+                    ${esc(row.label)}
+                </span>
+
+
+                <button
+                    class="mini-btn"
+                    onclick="editItem('${item.id}')"
+                >
+                    ✏️ 查看
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =========================================================
 工作表單
 ========================================================= */
 
@@ -2852,6 +3455,12 @@ if (itemForm) {
                 return;
 
             }
+
+
+            const oneHourCheckbox =
+                document.querySelector(
+                    "#itemOneHourReminder"
+                );
 
 
             const data = {
@@ -2888,6 +3497,17 @@ if (itemForm) {
                     document.querySelector(
                         "#itemReminder"
                     ).value,
+
+                /*
+                 * 第二階段提醒
+                 * 當天工作時間前 1 小時
+                 */
+                reminderOneHour:
+                    oneHourCheckbox
+                    ?
+                    oneHourCheckbox.checked
+                    :
+                    false,
 
                 done:
                     false
@@ -3152,836 +3772,6 @@ if (projectForm) {
 
 
 /* =========================================================
-資料備份
-========================================================= */
-
-/*
-    備份格式：
-
-    {
-        version: "YAO-BACKUP-1",
-        exportedAt: "...",
-        user: "...",
-        projects: [...],
-        items: [...]
-    }
-
-    注意：
-    Firebase document ID 也會一起保存。
-
-    還原時會：
-
-    1. 先刪除目前所有 projects
-    2. 先刪除目前所有 items
-    3. 使用備份檔的 document ID 重新寫入
-    4. 因此可以完整恢復原本資料
-*/
-
-
-function renderBackup() {
-
-    const projectCount =
-        projects.length;
-
-    const itemCount =
-        items.length;
-
-
-    app.innerHTML = `
-
-        <div class="project-toolbar">
-
-            <div>
-
-                <strong>
-                    資料備份
-                </strong>
-
-                <div class="muted">
-                    備份與還原 Firebase 雲端資料
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div
-            class="grid two-col"
-            style="margin-top:16px"
-        >
-
-
-            <!-- =====================================
-                 匯出
-            ====================================== -->
-
-            <div class="card">
-
-                <h3>
-                    📤 匯出資料
-                </h3>
-
-                <p class="muted">
-                    將目前 Firebase 裡的案場與工作資料下載成一個 JSON 備份檔。
-                </p>
-
-                <div
-                    class="stat"
-                    style="margin:16px 0"
-                >
-
-                    <div class="stat-label">
-                        目前案場
-                    </div>
-
-                    <div class="stat-value">
-                        ${projectCount}
-                    </div>
-
-                </div>
-
-
-                <div
-                    class="stat"
-                    style="margin-bottom:16px"
-                >
-
-                    <div class="stat-label">
-                        目前工作
-                    </div>
-
-                    <div class="stat-value">
-                        ${itemCount}
-                    </div>
-
-                </div>
-
-
-                <button
-                    class="btn primary"
-                    onclick="exportBackup()"
-                >
-                    📥 下載備份檔
-                </button>
-
-            </div>
-
-
-            <!-- =====================================
-                 匯入
-            ====================================== -->
-
-            <div class="card">
-
-                <h3>
-                    📥 匯入並覆蓋
-                </h3>
-
-                <p class="muted">
-                    選擇之前下載的 JSON 備份檔，將目前 Firebase 資料完整還原。
-                </p>
-
-                <div
-                    class="form-hint"
-                    style="margin:16px 0"
-                >
-                    ⚠️ 匯入後，目前的案場與工作資料會被備份檔取代。
-                </div>
-
-
-                <button
-                    class="btn"
-                    onclick="selectBackupFile()"
-                >
-                    📂 選擇備份檔
-                </button>
-
-
-                <div
-                    class="muted"
-                    style="margin-top:12px"
-                >
-                    建議還原前，先再下載一次目前資料作為保險。
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-        <div
-            class="card"
-            style="margin-top:16px"
-        >
-
-            <h3>
-                🛡️ 備份建議
-            </h3>
-
-            <div class="muted">
-
-                平常可以定期按「下載備份檔」，將檔案保存到電腦、手機或雲端硬碟。
-
-                <br><br>
-
-                如果未來 Firebase 資料發生問題，只要登入 Yao，
-                進入「資料備份」，再選擇之前的 JSON 檔即可一次還原。
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-建立備份資料
-========================================================= */
-
-function createBackupData() {
-
-    return {
-
-        version:
-            "YAO-BACKUP-1",
-
-        app:
-            "Yao 消防工程行政管理",
-
-        exportedAt:
-            new Date().toISOString(),
-
-        user:
-            currentUser?.email || "",
-
-        projects:
-            projects.map(
-                project => ({
-                    ...project
-                })
-            ),
-
-        items:
-            items.map(
-                item => ({
-                    ...item
-                })
-            )
-
-    };
-
-}
-
-
-/* =========================================================
-匯出 Firebase 資料
-========================================================= */
-
-function exportBackup() {
-
-    if (!currentUser) {
-
-        toast(
-            "請先登入"
-        );
-
-        return;
-
-    }
-
-
-    try {
-
-        const backup =
-            createBackupData();
-
-
-        const json =
-            JSON.stringify(
-                backup,
-                null,
-                2
-            );
-
-
-        const blob =
-            new Blob(
-                [json],
-                {
-                    type:
-                        "application/json"
-                }
-            );
-
-
-        const url =
-            URL.createObjectURL(
-                blob
-            );
-
-
-        const link =
-            document.createElement(
-                "a"
-            );
-
-
-        const now =
-            new Date();
-
-
-        const date =
-            `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-
-        const time =
-            `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
-
-
-        link.href =
-            url;
-
-
-        link.download =
-            `Yao-備份-${date}_${time}.json`;
-
-
-        document.body.appendChild(
-            link
-        );
-
-
-        link.click();
-
-
-        link.remove();
-
-
-        URL.revokeObjectURL(
-            url
-        );
-
-
-        toast(
-            "備份檔已下載"
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "匯出備份失敗:",
-            error
-        );
-
-        toast(
-            "備份失敗"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-選擇備份檔
-========================================================= */
-
-function selectBackupFile() {
-
-    const input =
-        document.querySelector(
-            "#backupFileInput"
-        );
-
-
-    if (!input)
-        return;
-
-
-    input.value = "";
-
-    input.click();
-
-}
-
-
-/* =========================================================
-處理備份檔
-========================================================= */
-
-const backupFileInput =
-    document.querySelector(
-        "#backupFileInput"
-    );
-
-
-if (backupFileInput) {
-
-    backupFileInput.addEventListener(
-        "change",
-        async function (event) {
-
-            const file =
-                event.target.files?.[0];
-
-
-            if (!file)
-                return;
-
-
-            try {
-
-                const text =
-                    await file.text();
-
-
-                const backup =
-                    JSON.parse(text);
-
-
-                await importBackup(
-                    backup
-                );
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "讀取備份檔失敗:",
-                    error
-                );
-
-                alert(
-                    "備份檔讀取失敗。\n\n請確認你選擇的是 Yao 匯出的 JSON 備份檔。"
-                );
-
-            }
-
-            finally {
-
-                event.target.value = "";
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-驗證備份資料
-========================================================= */
-
-function validateBackup(backup) {
-
-    if (
-        !backup ||
-        typeof backup !== "object"
-    ) {
-
-        return false;
-
-    }
-
-
-    if (
-        backup.version !==
-        "YAO-BACKUP-1"
-    ) {
-
-        return false;
-
-    }
-
-
-    if (
-        !Array.isArray(
-            backup.projects
-        )
-    ) {
-
-        return false;
-
-    }
-
-
-    if (
-        !Array.isArray(
-            backup.items
-        )
-    ) {
-
-        return false;
-
-    }
-
-
-    return true;
-
-}
-
-
-/* =========================================================
-Firebase 批次刪除
-========================================================= */
-
-async function deleteCollectionDocuments(
-    collectionName
-) {
-
-    const collectionRef =
-        userCollection(
-            collectionName
-        );
-
-
-    const snapshot =
-        await getDocs(
-            collectionRef
-        );
-
-
-    if (
-        snapshot.empty
-    )
-        return;
-
-
-    const batch =
-        writeBatch(db);
-
-
-    snapshot.docs.forEach(
-        documentSnapshot => {
-
-            batch.delete(
-                documentSnapshot.ref
-            );
-
-        }
-    );
-
-
-    await batch.commit();
-
-}
-
-
-/* =========================================================
-Firebase 批次寫入
-========================================================= */
-
-async function restoreCollection(
-    collectionName,
-    records
-) {
-
-    if (
-        !Array.isArray(records) ||
-        records.length === 0
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-     * Firestore 單一 batch 最多 500 個操作。
-     * 因此資料量大時自動分批。
-     */
-
-    const chunkSize =
-        450;
-
-
-    for (
-        let start = 0;
-        start < records.length;
-        start += chunkSize
-    ) {
-
-        const chunk =
-            records.slice(
-                start,
-                start + chunkSize
-            );
-
-
-        const batch =
-            writeBatch(db);
-
-
-        chunk.forEach(
-            record => {
-
-                if (
-                    !record ||
-                    !record.id
-                ) {
-
-                    return;
-
-                }
-
-
-                const data = {
-                    ...record
-                };
-
-
-                delete data.id;
-
-
-                const ref =
-                    doc(
-                        db,
-                        "users",
-                        currentUser.uid,
-                        collectionName,
-                        String(record.id)
-                    );
-
-
-                batch.set(
-                    ref,
-                    data
-                );
-
-            }
-        );
-
-
-        await batch.commit();
-
-    }
-
-}
-
-
-/* =========================================================
-匯入並覆蓋
-========================================================= */
-
-async function importBackup(backup) {
-
-    if (!currentUser) {
-
-        alert(
-            "請先登入 Yao。"
-        );
-
-        return;
-
-    }
-
-
-    if (
-        !validateBackup(
-            backup
-        )
-    ) {
-
-        alert(
-            "這不是有效的 Yao 備份檔。"
-        );
-
-        return;
-
-    }
-
-
-    const backupProjects =
-        backup.projects.length;
-
-
-    const backupItems =
-        backup.items.length;
-
-
-    const confirmed =
-        confirm(
-            `確定要還原這份備份嗎？\n\n` +
-            `備份案場：${backupProjects} 筆\n` +
-            `備份工作：${backupItems} 筆\n\n` +
-            `⚠️ 注意：\n` +
-            `目前 Firebase 裡的案場與工作資料會先被刪除，\n` +
-            `再使用這份備份完整還原。\n\n` +
-            `建議先按「下載備份檔」保存目前資料。\n\n` +
-            `確定要繼續嗎？`
-        );
-
-
-    if (!confirmed)
-        return;
-
-
-    const doubleConfirmed =
-        confirm(
-            "最後確認：\n\n這個動作會覆蓋目前 Firebase 資料。\n\n確定還原嗎？"
-        );
-
-
-    if (!doubleConfirmed)
-        return;
-
-
-    try {
-
-        toast(
-            "正在準備還原資料…"
-        );
-
-
-        /*
-         * 先停止即時監聽，
-         * 避免還原過程中畫面一直刷新。
-         */
-
-        if (unsubscribeProjects) {
-
-            unsubscribeProjects();
-
-            unsubscribeProjects =
-                null;
-
-        }
-
-
-        if (unsubscribeItems) {
-
-            unsubscribeItems();
-
-            unsubscribeItems =
-                null;
-
-        }
-
-
-        /*
-         * 1. 刪除目前工作
-         */
-
-        await deleteCollectionDocuments(
-            "items"
-        );
-
-
-        /*
-         * 2. 刪除目前案場
-         */
-
-        await deleteCollectionDocuments(
-            "projects"
-        );
-
-
-        toast(
-            "舊資料已清除，正在還原…"
-        );
-
-
-        /*
-         * 3. 還原案場
-         */
-
-        await restoreCollection(
-            "projects",
-            backup.projects
-        );
-
-
-        /*
-         * 4. 還原工作
-         */
-
-        await restoreCollection(
-            "items",
-            backup.items
-        );
-
-
-        /*
-         * 5. 重新啟動即時同步
-         */
-
-        items = [];
-
-        projects = [];
-
-        dataReady = false;
-
-
-        await startRealtimeData();
-
-
-        /*
-         * 等待 Firebase Snapshot
-         */
-
-        toast(
-            "資料還原完成"
-        );
-
-
-        alert(
-            `資料還原完成！\n\n案場：${backupProjects} 筆\n工作：${backupItems} 筆\n\nYao 已重新同步 Firebase。`
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "資料還原失敗:",
-            error
-        );
-
-
-        /*
-         * 即使還原途中出錯，
-         * 仍嘗試重新建立同步。
-         */
-
-        try {
-
-            await startRealtimeData();
-
-        }
-
-        catch (restartError) {
-
-            console.error(
-                "重新同步失敗:",
-                restartError
-            );
-
-        }
-
-
-        alert(
-            "資料還原失敗。\n\n請查看瀏覽器主控台的錯誤訊息，並不要重複操作。"
-        );
-
-
-        toast(
-            "資料還原失敗"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
 選單
 ========================================================= */
 
@@ -4203,7 +3993,6 @@ if (searchInput) {
 
 /* =========================================================
 全域函式
-HTML onclick 需要
 ========================================================= */
 
 window.editItem =
@@ -4249,20 +4038,6 @@ window.changeCalendarMonth =
 
 window.goCalendarToday =
     goCalendarToday;
-
-
-/* =========================================================
-資料備份全域函式
-========================================================= */
-
-window.renderBackup =
-    renderBackup;
-
-window.exportBackup =
-    exportBackup;
-
-window.selectBackupFile =
-    selectBackupFile;
 
 
 /* =========================================================

@@ -1,0 +1,10 @@
+{
+  "name": "Yao｜消防工程行政管理",
+  "short_name": "Yao",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#111827",
+  "lang": "zh-Hant",
+  "description": "消防工程行政、案場、行程、進料、出貨、人員與查驗管理"
+}

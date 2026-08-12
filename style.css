@@ -1108,3 +1108,140 @@ body {
     }
 
 }
+/* =========================================
+   YAO 消防管理系統｜手機版 RWD
+   不修改原本電腦版，只在 768px 以下生效
+========================================= */
+
+@media screen and (max-width: 768px) {
+
+    /* 防止整個網頁左右溢出 */
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* 所有元素避免超出螢幕 */
+    *,
+    *::before,
+    *::after {
+        max-width: 100%;
+    }
+
+    /* 主容器 */
+    body {
+        min-width: 0 !important;
+    }
+
+    /* 圖片自動縮放 */
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* 表格太寬時可以左右滑 */
+    table {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 輸入欄位 */
+    input,
+    textarea,
+    select,
+    button {
+        max-width: 100%;
+        font-size: 16px;
+    }
+
+    /* 防止長文字把版面撐破 */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    span,
+    div,
+    a {
+        overflow-wrap: break-word;
+    }
+
+    /* 卡片、區塊自動縮小 */
+    .container,
+    .content,
+    .main-content,
+    .dashboard,
+    .panel,
+    .card {
+        width: 100%;
+        max-width: 100%;
+    }
+
+}
+
+
+/* =========================================
+   小手機
+========================================= */
+
+@media screen and (max-width: 480px) {
+
+    body {
+        font-size: 14px;
+    }
+
+    h1 {
+        font-size: 22px;
+    }
+
+    h2 {
+        font-size: 19px;
+    }
+
+    h3 {
+        font-size: 17px;
+    }
+
+    button {
+        min-height: 42px;
+    }
+
+    input,
+    textarea,
+    select {
+        min-height: 42px;
+    }
+
+}
+
+
+/* =========================================
+   超小手機
+========================================= */
+
+@media screen and (max-width: 360px) {
+
+    body {
+        font-size: 13px;
+    }
+
+    h1 {
+        font-size: 20px;
+    }
+
+    h2 {
+        font-size: 18px;
+    }
+
+    h3 {
+        font-size: 16px;
+    }
+
+}

@@ -119,6 +119,7 @@
             ＋ 快速新增
         </button>
 
+
         <small>
             Yao V3
         </small>
@@ -134,7 +135,6 @@
 ========================= -->
 
 <main class="main">
-
 
     <header class="topbar">
 
@@ -300,7 +300,6 @@
                     >
 
                 </label>
-
 
             </div>
 
@@ -476,7 +475,6 @@
 
                 </label>
 
-
             </div>
 
 
@@ -531,7 +529,84 @@
 
 
 
+<!-- =========================
+     原本程式
+========================= -->
+
 <script src="app.js"></script>
+
+
+
+<!-- =========================
+     Service Worker
+     自動更新
+========================= -->
+
+<script>
+
+if ("serviceWorker" in navigator) {
+
+    window.addEventListener("load", () => {
+
+        navigator.serviceWorker
+            .register("./sw.js")
+            .then(registration => {
+
+                console.log(
+                    "Yao Service Worker 已啟用"
+                );
+
+
+                /*
+                 * 每 60 秒檢查一次新版
+                 */
+
+                setInterval(() => {
+
+                    registration.update();
+
+                }, 60000);
+
+            })
+            .catch(error => {
+
+                console.error(
+                    "Service Worker 啟用失敗:",
+                    error
+                );
+
+            });
+
+    });
+
+
+    /*
+     * 偵測新版 Service Worker
+     */
+
+    navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        () => {
+
+            /*
+             * 防止無限重新整理
+             */
+
+            if (!window.__YAO_RELOADED__) {
+
+                window.__YAO_RELOADED__ = true;
+
+                window.location.reload();
+
+            }
+
+        }
+    );
+
+}
+
+</script>
+
 
 </body>
 

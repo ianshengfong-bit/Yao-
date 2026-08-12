@@ -1,27 +1,21 @@
 /* =========================================================
-YAO V4.5
+YAO V5.0
 Firebase 雲端版
 消防工程行政管理
-app.js
 
-本版本修正：
-
-1. 今天有工作時間，即使沒有設定第一/第二階段提醒，
-   也會出現在「提醒中心」。
-
-2. 工作時間到了會跳出網頁內提醒視窗。
-
-3. 第一階段提前 N 天提醒正常。
-
-4. 第二階段提前 1 小時提醒正常。
-
-5. 如果 HTML 沒有提醒 Popup，
-   JavaScript 會自動建立，不再因為 DOM 不存在而失效。
-
-6. 每 10 秒檢查一次提醒。
-
-7. 同一台裝置同一個提醒只顯示一次。
-
+本版本：
+1. 保留 Firebase 登入系統
+2. 保留 Firestore 資料結構
+3. 修正提醒中心
+4. 修正提醒 Popup
+5. 到時間自動跳提醒
+6. 提前 N 天提醒
+7. 提前 1 小時提醒
+8. 網頁重新取得焦點時立即檢查
+9. 每 30 秒自動檢查
+10. 新增瀏覽器通知支援
+11. 修改工作後重新計算提醒
+12. 沒有設定提醒的工作仍可出現在提醒中心
 ========================================================= */
 
 
@@ -58,7 +52,7 @@ Firebase 設定
 const firebaseConfig = {
 
     apiKey:
-        "AIzaSyDIHHzGpIkuMUvy5q5yBrDrb_kvJTAM2QJo",
+        "AIzaSyDIHHzGpIkuMUvyq5yBrDrb_kvJTAM2QJo",
 
     authDomain:
         "yao-fire.firebaseapp.com",
@@ -81,10 +75,8 @@ const firebaseConfig = {
 const firebaseApp =
     initializeApp(firebaseConfig);
 
-
 const auth =
     getAuth(firebaseApp);
-
 
 const db =
     getFirestore(firebaseApp);
@@ -112,9 +104,13 @@ let unsubscribeItems = null;
 
 let dataReady = false;
 
+let projectsReady = false;
+
+let itemsReady = false;
+
 
 /* =========================================================
-行事曆狀態
+行事曆
 ========================================================= */
 
 let calendarDate = new Date();
@@ -123,7 +119,7 @@ calendarDate.setDate(1);
 
 
 /* =========================================================
-提醒系統狀態
+提醒系統
 ========================================================= */
 
 let reminderCheckTimer = null;
@@ -134,13 +130,15 @@ let reminderPopupShowing = false;
 
 
 /*
- * 同一台裝置已經顯示過的提醒。
+ * V3：
+ * 使用新的 Key。
  *
- * 每台裝置自己記錄。
+ * 這樣可以避免舊 V2 測試資料
+ * 導致新的提醒不跳出。
  */
 
 const REMINDER_STORAGE_KEY =
-    "YAO_REMINDER_SHOWN_V2";
+    "YAO_REMINDER_SHOWN_V3";
 
 
 /* =========================================================
@@ -235,6 +233,46 @@ function addDays(number) {
 }
 
 
+function addDaysFromISO(
+    isoDate,
+    amount
+) {
+
+    const parts =
+        String(isoDate)
+            .split("-")
+            .map(Number);
+
+    if (
+        parts.length !== 3 ||
+        parts.some(
+            Number.isNaN
+        )
+    ) {
+
+        return isoDate;
+
+    }
+
+    const date =
+        new Date(
+            parts[0],
+            parts[1] - 1,
+            parts[2]
+        );
+
+    date.setDate(
+        date.getDate() + amount
+    );
+
+    return `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+    ).padStart(2, "0")}-${String(
+        date.getDate()
+    ).padStart(2, "0")}`;
+}
+
+
 function formatDate(date) {
 
     if (!date)
@@ -316,7 +354,7 @@ function userCollection(name) {
 
 
 /* =========================================================
-Firebase 登入
+登入
 ========================================================= */
 
 if (loginForm) {
@@ -376,7 +414,7 @@ if (loginForm) {
 
 
 /* =========================================================
-登入錯誤訊息
+登入錯誤
 ========================================================= */
 
 function getLoginErrorMessage(code) {
@@ -472,12 +510,31 @@ onAuthStateChanged(
                 "hidden"
             );
 
+
             /*
-             * 確保提醒 Popup 存在
+             * 建立提醒 UI
              */
-            ensureReminderPopup();
+
+            ensureReminderUI();
+
+
+            /*
+             * 建立提醒中心
+             */
+
+            ensureReminderNav();
+
+
+            /*
+             * 啟動提醒檢查
+             */
 
             startReminderChecker();
+
+
+            /*
+             * 啟動 Firebase
+             */
 
             await startRealtimeData();
 
@@ -494,7 +551,7 @@ onAuthStateChanged(
 
             reminderPopupQueue = [];
 
-            closeReminderPopup();
+            closeReminderPopup(true);
 
             system.classList.add(
                 "hidden"
@@ -511,12 +568,16 @@ onAuthStateChanged(
 
 
 /* =========================================================
-啟動即時資料
+建立即時資料
 ========================================================= */
 
 async function startRealtimeData() {
 
     dataReady = false;
+
+    projectsReady = false;
+
+    itemsReady = false;
 
     items = [];
 
@@ -525,7 +586,6 @@ async function startRealtimeData() {
 
     if (unsubscribeProjects)
         unsubscribeProjects();
-
 
     if (unsubscribeItems)
         unsubscribeItems();
@@ -550,11 +610,9 @@ async function startRealtimeData() {
                     );
 
 
-                dataReady = true;
+                projectsReady = true;
 
-                render();
-
-                checkDueReminders();
+                updateDataReady();
 
             },
 
@@ -592,11 +650,9 @@ async function startRealtimeData() {
                     );
 
 
-                dataReady = true;
+                itemsReady = true;
 
-                render();
-
-                checkDueReminders();
+                updateDataReady();
 
             },
 
@@ -613,6 +669,33 @@ async function startRealtimeData() {
 
             }
         );
+
+}
+
+
+/* =========================================================
+確認資料完成
+========================================================= */
+
+function updateDataReady() {
+
+    if (
+        projectsReady &&
+        itemsReady
+    ) {
+
+        dataReady = true;
+
+        render();
+
+        /*
+         * Firebase 資料完成後
+         * 立即檢查提醒
+         */
+
+        checkDueReminders();
+
+    }
 
 }
 
@@ -648,6 +731,10 @@ function stopRealtimeData() {
     projects = [];
 
     dataReady = false;
+
+    projectsReady = false;
+
+    itemsReady = false;
 
 }
 
@@ -776,23 +863,34 @@ function render() {
     }
 
 
+    ensureReminderNav();
+
+
     const titles = {
 
-        dashboard: "儀表板",
+        dashboard:
+            "儀表板",
 
-        calendar: "行事曆",
+        calendar:
+            "行事曆",
 
-        projects: "案場",
+        projects:
+            "案場",
 
-        logistics: "進料 / 出貨",
+        logistics:
+            "進料 / 出貨",
 
-        people: "人員安排",
+        people:
+            "人員安排",
 
-        inspection: "查驗",
+        inspection:
+            "查驗",
 
-        records: "工作紀錄",
+        records:
+            "工作紀錄",
 
-        reminders: "提醒中心"
+        reminders:
+            "提醒中心"
 
     };
 
@@ -956,13 +1054,12 @@ function renderDashboard(data) {
 
 
     const reminders =
-        buildReminderRows()
-            .filter(
-                x =>
-                    x.date >=
-                    isoToday
-            )
-            .length;
+        items.filter(
+            x =>
+                !x.done &&
+                x.date >= isoToday &&
+                x.reminder !== "none"
+        ).length;
 
 
     const activeProjects =
@@ -1002,7 +1099,14 @@ function renderDashboard(data) {
             </div>
 
 
-            <div class="stat">
+            <div
+                class="stat"
+                style="cursor:pointer"
+                onclick="
+                    currentPage='reminders';
+                    render();
+                "
+            >
 
                 <div class="stat-label">
                     即將提醒
@@ -1966,19 +2070,6 @@ function openItemModal(
             isoToday;
 
 
-        /*
-         * 預設工作時間。
-         *
-         * 使用者如果有輸入，
-         * 就會以使用者輸入為準。
-         */
-
-        document.querySelector(
-            "#itemTime"
-        ).value =
-            "09:00";
-
-
         const oneHour =
             document.querySelector(
                 "#itemOneHourReminder"
@@ -2178,6 +2269,11 @@ async function deleteItem(id) {
         );
 
 
+        clearReminderHistoryForItem(
+            id
+        );
+
+
         toast(
             "資料已刪除"
         );
@@ -2230,6 +2326,20 @@ async function toggleDone(id) {
                     !item.done
             }
         );
+
+
+        /*
+         * 完成工作時，
+         * 清掉提醒顯示紀錄。
+         */
+
+        if (!item.done) {
+
+            clearReminderHistoryForItem(
+                id
+            );
+
+        }
 
 
         toast(
@@ -2407,7 +2517,7 @@ async function shareItem(id) {
 
 
     const text =
-`【${project?.code || ""}｜${project?.name || ""}】
+        `【${project?.code || ""}｜${project?.name || ""}】
 
 📌 ${item.type}
 
@@ -2825,12 +2935,9 @@ function renderCalendar(data) {
 
         <div class="calendar-page">
 
-
             <div class="calendar-toolbar">
 
-
                 <div class="calendar-title">
-
 
                     <button
                         class="calendar-nav-btn"
@@ -2871,7 +2978,6 @@ function renderCalendar(data) {
                         ›
                     </button>
 
-
                 </div>
 
 
@@ -2887,19 +2993,16 @@ function renderCalendar(data) {
 
                 </button>
 
-
             </div>
 
 
             <div class="calendar-card">
-
 
                 <div class="calendar">
 
                     ${calendarHTML}
 
                 </div>
-
 
             </div>
 
@@ -2916,7 +3019,6 @@ function renderCalendar(data) {
 
             </div>
 
-
         </div>
 
     `;
@@ -2925,27 +3027,8 @@ function renderCalendar(data) {
 
 
 /* =========================================================
-提醒時間工具
-========================================================= */
-
-/*
- * 重要：
- *
- * 現在提醒分成三種：
- *
- * stage 0
- * 工作時間
- *
- * stage 1
- * 提前 N 天
- *
- * stage 2
- * 提前 1 小時
- */
-
-
-/* =========================================================
-建立提醒時間
+提醒：
+取得實際提醒時間
 ========================================================= */
 
 function getReminderTimes(item) {
@@ -2961,41 +3044,19 @@ function getReminderTimes(item) {
 
 
     const workTime =
-        item.time || "09:00";
+        normalizeTime(
+            item.time || "09:00"
+        );
 
-
-    /*
-     * ★ Stage 0
-     *
-     * 所有未完成工作，
-     * 都有自己的工作時間提醒。
-     *
-     * 這就是你這次測試需要的功能。
-     */
-
-    result.push({
-
-        stage: 0,
-
-        date:
-            item.date,
-
-        time:
-            workTime,
-
-        label:
-            "工作時間"
-
-    });
-
-
-    /*
-     * ★ Stage 1
-     */
 
     const reminderBefore =
         item.reminder || "none";
 
+
+    /*
+     * 第一階段
+     * 提前 N 天
+     */
 
     if (
         reminderBefore !== "none"
@@ -3037,9 +3098,8 @@ function getReminderTimes(item) {
 
 
     /*
-     * ★ Stage 2
-     *
-     * 工作前一小時
+     * 第二階段
+     * 提前 1 小時
      */
 
     if (
@@ -3077,71 +3137,19 @@ function getReminderTimes(item) {
 
 
 /* =========================================================
-指定日期加減天數
+時間格式標準化
 ========================================================= */
 
-function addDaysFromISO(
-    isoDate,
-    amount
-) {
+function normalizeTime(time) {
 
-    const parts =
-        String(isoDate)
-            .split("-")
-            .map(Number);
-
-
-    if (
-        parts.length !== 3 ||
-        parts.some(
-            Number.isNaN
-        )
-    ) {
-
-        return isoDate;
-
-    }
-
-
-    const date =
-        new Date(
-            parts[0],
-            parts[1] - 1,
-            parts[2]
-        );
-
-
-    date.setDate(
-        date.getDate() + amount
-    );
-
-
-    return `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-    ).padStart(2, "0")}-${String(
-        date.getDate()
-    ).padStart(2, "0")}`;
-
-}
-
-
-/* =========================================================
-扣除一小時
-========================================================= */
-
-function subtractOneHour(
-    isoDate,
-    time
-) {
-
-    const safeTime =
-        time || "09:00";
+    const text =
+        String(
+            time || "09:00"
+        ).trim();
 
 
     const parts =
-        safeTime
-            .split(":")
-            .map(Number);
+        text.split(":").map(Number);
 
 
     let hour =
@@ -3160,20 +3168,65 @@ function subtractOneHour(
         0;
 
 
-    minute -= 60;
+    hour =
+        Math.max(
+            0,
+            Math.min(
+                23,
+                hour
+            )
+        );
 
 
-    if (minute < 0) {
+    minute =
+        Math.max(
+            0,
+            Math.min(
+                59,
+                minute
+            )
+        );
 
-        minute += 60;
 
-        hour -= 1;
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 
-    }
+}
+
+
+/* =========================================================
+扣除一小時
+========================================================= */
+
+function subtractOneHour(
+    isoDate,
+    time
+) {
+
+    const safeTime =
+        normalizeTime(
+            time || "09:00"
+        );
+
+
+    const parts =
+        safeTime
+            .split(":")
+            .map(Number);
+
+
+    let hour =
+        parts[0];
+
+
+    let minute =
+        parts[1];
 
 
     let date =
         isoDate;
+
+
+    hour -= 1;
 
 
     if (hour < 0) {
@@ -3202,7 +3255,7 @@ function subtractOneHour(
 
 
 /* =========================================================
-建立提醒項目
+建立提醒資料
 ========================================================= */
 
 function buildReminderRows() {
@@ -3212,10 +3265,6 @@ function buildReminderRows() {
 
     items.forEach(
         item => {
-
-            /*
-             * 已完成的不提醒
-             */
 
             if (
                 item.done ||
@@ -3262,10 +3311,8 @@ function buildReminderRows() {
             const aKey =
                 `${a.date} ${a.time}`;
 
-
             const bKey =
                 `${b.date} ${b.time}`;
-
 
             return aKey.localeCompare(
                 bKey
@@ -3282,12 +3329,54 @@ function buildReminderRows() {
 
 /* =========================================================
 提醒中心
+=========================================================
+
+重要：
+
+提醒中心現在分成：
+
+1. 今天工作
+   即使沒有設定提醒也會顯示。
+
+2. 今天提醒
+   有設定提醒，且提醒日期是今天。
+
+3. 即將提醒
+   未來的提醒。
+
+4. 已過提醒
+   已經過提醒時間的資料。
 ========================================================= */
 
 function renderReminders() {
 
     const rows =
         buildReminderRows();
+
+
+    /*
+     * 今天所有未完成工作
+     */
+
+    const todayWork =
+        items
+            .filter(
+                item =>
+                    !item.done &&
+                    item.date === isoToday
+            )
+            .sort(
+                (a, b) =>
+                    (
+                        normalizeTime(
+                            a.time || "09:00"
+                        )
+                    ).localeCompare(
+                        normalizeTime(
+                            b.time || "09:00"
+                        )
+                    )
+            );
 
 
     const todayRows =
@@ -3325,7 +3414,7 @@ function renderReminders() {
                 </strong>
 
                 <div class="muted">
-                    所有工作時間與預設提醒集中顯示
+                    集中查看今天工作與工作提醒
                 </div>
 
             </div>
@@ -3333,48 +3422,72 @@ function renderReminders() {
         </div>
 
 
-        ${
-            todayRows.length
-            ?
-            `
+        <!-- 今天工作 -->
 
-            <div class="card">
+        <div class="card">
 
-                <h3>
-                    🔴 今天提醒
-                </h3>
+            <h3>
+                📋 今天工作
+            </h3>
 
-                <div class="list">
+            <div class="list">
 
-                    ${
-                        todayRows
-                            .map(
-                                reminderRow
-                            )
-                            .join("")
-                    }
+                ${
+                    todayWork.length
+                    ?
+                    todayWork
+                        .map(
+                            todayWorkRow
+                        )
+                        .join("")
+                    :
+                    `
+                    <div class="empty">
+                        今天沒有安排事項
+                    </div>
+                    `
+                }
 
-                </div>
+            </div>
+
+        </div>
+
+
+        <!-- 今天提醒 -->
+
+        <div
+            class="card"
+            style="margin-top:16px"
+        >
+
+            <h3>
+                🔴 今天提醒
+            </h3>
+
+            <div class="list">
+
+                ${
+                    todayRows.length
+                    ?
+                    todayRows
+                        .map(
+                            reminderRow
+                        )
+                        .join("")
+                    :
+                    `
+                    <div class="empty">
+                        今天目前沒有設定提醒
+                    </div>
+                    `
+                }
 
             </div>
 
-            `
-            :
-            `
-            <div class="card">
+        </div>
 
-                <h3>
-                    今天提醒
-                </h3>
 
-                <div class="empty">
-                    今天目前沒有提醒
-                </div>
-
-            </div>
-            `
-        }
-
+        <!-- 未來提醒 -->
 
         <div
             class="card"
@@ -3391,7 +3504,7 @@ function renderReminders() {
                     futureRows.length
                     ?
                     futureRows
-                        .slice(0, 50)
+                        .slice(0, 30)
                         .map(
                             reminderRow
                         )
@@ -3427,7 +3540,7 @@ function renderReminders() {
 
                     ${
                         overdueRows
-                            .slice(-30)
+                            .slice(-20)
                             .map(
                                 reminderRow
                             )
@@ -3442,6 +3555,111 @@ function renderReminders() {
             :
             ""
         }
+
+    `;
+
+}
+
+
+/* =========================================================
+今天工作列
+========================================================= */
+
+function todayWorkRow(item) {
+
+    const project =
+        getProject(
+            item.projectId
+        );
+
+
+    if (!project)
+        return "";
+
+
+    const reminderTimes =
+        getReminderTimes(item);
+
+
+    const reminderText =
+        reminderTimes.length
+        ?
+        reminderTimes
+            .map(
+                x =>
+                    x.label
+            )
+            .join("、")
+        :
+        "未設定提醒";
+
+
+    return `
+
+        <div class="list-row">
+
+            <div class="list-main">
+
+                <strong>
+
+                    📋
+
+                    ${esc(item.title)}
+
+                </strong>
+
+                <span>
+
+                    ${esc(project.code)}
+                    ｜${esc(project.name)}
+
+                    ・
+
+                    ${esc(
+                        normalizeTime(
+                            item.time || "09:00"
+                        )
+                    )}
+
+                    ・
+
+                    ${esc(reminderText)}
+
+                </span>
+
+            </div>
+
+
+            <div class="row-actions">
+
+                <span
+                    class="
+                        tag
+                        ${reminderTimes.length
+                            ? "blue"
+                            : "gray"}
+                    "
+                >
+                    ${
+                        reminderTimes.length
+                        ?
+                        "已設定提醒"
+                        :
+                        "無提醒"
+                    }
+                </span>
+
+
+                <button
+                    class="mini-btn"
+                    onclick="editItem('${item.id}')"
+                >
+                    ✏️ 查看
+                </button>
+
+            </div>
+
+        </div>
 
     `;
 
@@ -3481,53 +3699,6 @@ function reminderRow(row) {
         );
 
 
-    let icon =
-        "🔔";
-
-
-    let tagClass =
-        "blue";
-
-
-    if (
-        row.stage === 0
-    ) {
-
-        icon =
-            "📌";
-
-        tagClass =
-            "green";
-
-    }
-
-
-    if (
-        row.stage === 2
-    ) {
-
-        icon =
-            "⏰";
-
-        tagClass =
-            "orange";
-
-    }
-
-
-    if (
-        row.stage === 1
-    ) {
-
-        icon =
-            "🔔";
-
-        tagClass =
-            "blue";
-
-    }
-
-
     return `
 
         <div class="list-row">
@@ -3536,7 +3707,13 @@ function reminderRow(row) {
 
                 <strong>
 
-                    ${icon}
+                    ${
+                        row.stage === 2
+                        ?
+                        "⏰ "
+                        :
+                        "🔔 "
+                    }
 
                     ${esc(item.title)}
 
@@ -3557,6 +3734,15 @@ function reminderRow(row) {
 
                     ${esc(row.label)}
 
+                    ・
+
+                    工作時間：
+                    ${esc(
+                        normalizeTime(
+                            item.time || "09:00"
+                        )
+                    )}
+
                 </span>
 
             </div>
@@ -3567,7 +3753,9 @@ function reminderRow(row) {
                 <span
                     class="
                         tag
-                        ${tagClass}
+                        ${row.stage === 2
+                            ? "orange"
+                            : "blue"}
                     "
                 >
                     ${esc(row.label)}
@@ -3653,7 +3841,7 @@ function markReminderShown(key) {
 
 
     /*
-     * 清理超過 30 天的紀錄
+     * 清理超過 30 天
      */
 
     const limit =
@@ -3713,7 +3901,8 @@ function getReminderKey(row) {
 
     return [
 
-        currentUser?.uid || "guest",
+        currentUser?.uid ||
+            "guest",
 
         row.item.id,
 
@@ -3729,66 +3918,13 @@ function getReminderKey(row) {
 
 
 /* =========================================================
-解析時間
-========================================================= */
-
-function getTimeParts(time) {
-
-    const parts =
-        String(
-            time || "09:00"
-        )
-            .split(":")
-            .map(Number);
-
-
-    const hour =
-        Number.isFinite(parts[0])
-        ?
-        Math.max(
-            0,
-            Math.min(
-                23,
-                parts[0]
-            )
-        )
-        :
-        9;
-
-
-    const minute =
-        Number.isFinite(parts[1])
-        ?
-        Math.max(
-            0,
-            Math.min(
-                59,
-                parts[1]
-            )
-        )
-        :
-        0;
-
-
-    return {
-
-        hour,
-
-        minute
-
-    };
-
-}
-
-
-/* =========================================================
 判斷提醒是否到時間
 ========================================================= */
 
 function isReminderDue(row) {
 
-    if (!row)
-        return false;
+    const now =
+        new Date();
 
 
     const currentDate =
@@ -3796,7 +3932,7 @@ function isReminderDue(row) {
 
 
     /*
-     * 只判斷今天
+     * 只處理今天。
      */
 
     if (
@@ -3809,17 +3945,24 @@ function isReminderDue(row) {
     }
 
 
-    const now =
-        new Date();
-
-
-    const {
-        hour,
-        minute
-    } =
-        getTimeParts(
-            row.time
+    const normalized =
+        normalizeTime(
+            row.time || "09:00"
         );
+
+
+    const timeParts =
+        normalized
+            .split(":")
+            .map(Number);
+
+
+    const reminderHour =
+        timeParts[0];
+
+
+    const reminderMinute =
+        timeParts[1];
 
 
     const reminderTime =
@@ -3827,27 +3970,15 @@ function isReminderDue(row) {
 
 
     reminderTime.setHours(
-        hour,
-        minute,
+        reminderHour,
+        reminderMinute,
         0,
         0
     );
 
 
     /*
-     * 到時間後就算提醒成立。
-     *
-     * 所以：
-     *
-     * 19:18
-     *
-     * 19:18
-     * 19:19
-     * 19:20
-     *
-     * 都可以抓到。
-     *
-     * 但 localStorage 只會顯示一次。
+     * 到時間後就算到期。
      */
 
     return now >= reminderTime;
@@ -3856,7 +3987,151 @@ function isReminderDue(row) {
 
 
 /* =========================================================
-檢查目前是否有提醒
+系統通知
+========================================================= */
+
+async function requestNotificationPermission() {
+
+    if (
+        !("Notification" in window)
+    ) {
+
+        console.log(
+            "瀏覽器不支援 Notification"
+        );
+
+        return false;
+
+    }
+
+
+    if (
+        Notification.permission ===
+        "granted"
+    ) {
+
+        return true;
+
+    }
+
+
+    if (
+        Notification.permission ===
+        "denied"
+    ) {
+
+        return false;
+
+    }
+
+
+    try {
+
+        const permission =
+            await Notification.requestPermission();
+
+
+        return (
+            permission ===
+            "granted"
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "通知權限請求失敗:",
+            error
+        );
+
+        return false;
+
+    }
+
+}
+
+
+/* =========================================================
+發送系統通知
+========================================================= */
+
+function sendSystemNotification(row) {
+
+    if (
+        !("Notification" in window)
+    )
+        return;
+
+
+    if (
+        Notification.permission !==
+        "granted"
+    )
+        return;
+
+
+    const project =
+        row.project;
+
+
+    const title =
+        row.stage === 2
+        ?
+        "⏰ YAO 一小時提醒"
+        :
+        "🔔 YAO 工作提醒";
+
+
+    const body =
+        `${project?.code || ""}｜${project?.name || ""}\n${row.item.title || "工作提醒"}\n工作時間：${normalizeTime(row.item.time || "09:00")}`;
+
+
+    try {
+
+        const notification =
+            new Notification(
+                title,
+                {
+                    body,
+                    tag:
+                        getReminderKey(row),
+                    requireInteraction:
+                        true
+                }
+            );
+
+
+        notification.onclick =
+            function () {
+
+                window.focus();
+
+                notification.close();
+
+                currentPage =
+                    "reminders";
+
+                render();
+
+            };
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "系統通知失敗:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+檢查目前提醒
 ========================================================= */
 
 function checkDueReminders() {
@@ -3919,10 +4194,9 @@ function checkDueReminders() {
 
 
             /*
-             * 先記錄再加入 Queue。
-             *
+             * 先記錄。
              * 防止 Firebase snapshot
-             * 重複觸發。
+             * 再次觸發造成重複。
              */
 
             markReminderShown(
@@ -3931,8 +4205,7 @@ function checkDueReminders() {
 
 
             /*
-             * 避免同一個提醒
-             * 在 Queue 裡重複。
+             * 避免同一提醒重複 Queue。
              */
 
             const alreadyQueued =
@@ -3954,20 +4227,16 @@ function checkDueReminders() {
 
             }
 
+
+            /*
+             * 系統通知
+             */
+
+            sendSystemNotification(
+                row
+            );
+
         }
-    );
-
-
-    /*
-     * 依提醒時間排序
-     */
-
-    reminderPopupQueue.sort(
-        (a, b) =>
-            `${a.date} ${a.time}`
-                .localeCompare(
-                    `${b.date} ${b.time}`
-                )
     );
 
 
@@ -3977,7 +4246,634 @@ function checkDueReminders() {
 
 
 /* =========================================================
-顯示下一個提醒
+啟動提醒檢查器
+========================================================= */
+
+function startReminderChecker() {
+
+    stopReminderChecker();
+
+
+    /*
+     * 登入後立即檢查
+     */
+
+    setTimeout(
+        () => {
+
+            checkDueReminders();
+
+        },
+        500
+    );
+
+
+    /*
+     * 每 30 秒檢查一次
+     */
+
+    reminderCheckTimer =
+        setInterval(
+            () => {
+
+                isoToday =
+                    getTodayISO();
+
+
+                checkDueReminders();
+
+            },
+            30000
+        );
+
+
+    /*
+     * 網頁重新取得焦點
+     * 立即檢查。
+     */
+
+    window.removeEventListener(
+        "focus",
+        handleReminderFocus
+    );
+
+
+    window.addEventListener(
+        "focus",
+        handleReminderFocus
+    );
+
+
+    /*
+     * 使用者切回瀏覽器分頁
+     */
+
+    document.removeEventListener(
+        "visibilitychange",
+        handleReminderVisibility
+    );
+
+
+    document.addEventListener(
+        "visibilitychange",
+        handleReminderVisibility
+    );
+
+}
+
+
+/* =========================================================
+重新取得焦點
+========================================================= */
+
+function handleReminderFocus() {
+
+    if (!currentUser)
+        return;
+
+    checkDueReminders();
+
+}
+
+
+/* =========================================================
+切回分頁
+========================================================= */
+
+function handleReminderVisibility() {
+
+    if (
+        document.visibilityState ===
+        "visible"
+    ) {
+
+        checkDueReminders();
+
+    }
+
+}
+
+
+/* =========================================================
+停止提醒檢查器
+========================================================= */
+
+function stopReminderChecker() {
+
+    if (
+        reminderCheckTimer
+    ) {
+
+        clearInterval(
+            reminderCheckTimer
+        );
+
+
+        reminderCheckTimer =
+            null;
+
+    }
+
+
+    window.removeEventListener(
+        "focus",
+        handleReminderFocus
+    );
+
+
+    document.removeEventListener(
+        "visibilitychange",
+        handleReminderVisibility
+    );
+
+}
+
+
+/* =========================================================
+★ 自動建立提醒中心
+========================================================= */
+
+function ensureReminderNav() {
+
+    const nav =
+        document.querySelector(
+            "#nav"
+        );
+
+
+    if (!nav)
+        return;
+
+
+    let button =
+        nav.querySelector(
+            '.nav-item[data-page="reminders"]'
+        );
+
+
+    if (button)
+        return;
+
+
+    button =
+        document.createElement(
+            "button"
+        );
+
+
+    button.className =
+        "nav-item";
+
+
+    button.dataset.page =
+        "reminders";
+
+
+    button.type =
+        "button";
+
+
+    button.innerHTML = `
+
+        <span>
+            🔔
+        </span>
+
+        <span>
+            提醒中心
+        </span>
+
+    `;
+
+
+    nav.appendChild(
+        button
+    );
+
+}
+
+
+/* =========================================================
+★ 自動建立提醒 Popup
+========================================================= */
+
+function ensureReminderUI() {
+
+    /*
+     * 如果已經存在，
+     * 不要重複建立。
+     */
+
+    if (
+        document.querySelector(
+            "#reminderPopup"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const style =
+        document.createElement(
+            "style"
+        );
+
+
+    style.id =
+        "yao-reminder-style";
+
+
+    style.textContent = `
+
+        #reminderPopup {
+
+            position:fixed;
+
+            inset:0;
+
+            z-index:99999;
+
+            display:flex;
+
+            align-items:center;
+
+            justify-content:center;
+
+            padding:20px;
+
+            background:
+                rgba(0,0,0,.68);
+
+            backdrop-filter:
+                blur(5px);
+
+        }
+
+
+        #reminderPopup.hidden {
+
+            display:none;
+
+        }
+
+
+        .yao-reminder-box {
+
+            width:
+                min(560px, 100%);
+
+            background:
+                #ffffff;
+
+            color:
+                #111827;
+
+            border-radius:
+                24px;
+
+            box-shadow:
+                0 30px 80px
+                rgba(0,0,0,.35);
+
+            overflow:hidden;
+
+            animation:
+                yaoReminderIn
+                .25s ease;
+
+        }
+
+
+        .yao-reminder-top {
+
+            padding:
+                24px 26px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #dc2626,
+                    #b91c1c
+                );
+
+            color:#fff;
+
+        }
+
+
+        .yao-reminder-title {
+
+            font-size:
+                25px;
+
+            font-weight:
+                800;
+
+            margin:0;
+
+        }
+
+
+        .yao-reminder-stage {
+
+            margin-top:
+                8px;
+
+            font-size:
+                14px;
+
+            opacity:.92;
+
+        }
+
+
+        .yao-reminder-body {
+
+            padding:
+                26px;
+
+        }
+
+
+        .yao-reminder-project {
+
+            font-size:
+                15px;
+
+            font-weight:
+                700;
+
+            color:
+                #6b7280;
+
+            margin-bottom:
+                12px;
+
+        }
+
+
+        .yao-reminder-content {
+
+            font-size:
+                25px;
+
+            font-weight:
+                800;
+
+            line-height:
+                1.45;
+
+            margin-bottom:
+                20px;
+
+        }
+
+
+        .yao-reminder-time {
+
+            padding:
+                14px 16px;
+
+            background:
+                #f3f4f6;
+
+            border-radius:
+                12px;
+
+            font-size:
+                15px;
+
+            color:
+                #374151;
+
+        }
+
+
+        .yao-reminder-actions {
+
+            margin-top:
+                22px;
+
+            display:flex;
+
+            justify-content:flex-end;
+
+            gap:10px;
+
+        }
+
+
+        #reminderPopupClose {
+
+            border:0;
+
+            border-radius:
+                12px;
+
+            padding:
+                13px 25px;
+
+            background:
+                #111827;
+
+            color:#fff;
+
+            font-size:
+                16px;
+
+            font-weight:
+                700;
+
+            cursor:pointer;
+
+        }
+
+
+        #reminderPopupClose:hover {
+
+            opacity:.9;
+
+        }
+
+
+        @keyframes yaoReminderIn {
+
+            from {
+
+                opacity:0;
+
+                transform:
+                    translateY(20px)
+                    scale(.96);
+
+            }
+
+            to {
+
+                opacity:1;
+
+                transform:
+                    translateY(0)
+                    scale(1);
+
+            }
+
+        }
+
+
+        body.reminder-popup-open {
+
+            overflow:hidden;
+
+        }
+
+    `;
+
+
+    document.head.appendChild(
+        style
+    );
+
+
+    /*
+     * 建立 Popup
+     */
+
+    const popup =
+        document.createElement(
+            "div"
+        );
+
+
+    popup.id =
+        "reminderPopup";
+
+
+    popup.className =
+        "hidden";
+
+
+    popup.innerHTML = `
+
+        <div
+            class="yao-reminder-box"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reminderPopupTitle"
+        >
+
+            <div
+                class="yao-reminder-top"
+            >
+
+                <h2
+                    id="reminderPopupTitle"
+                    class="yao-reminder-title"
+                >
+                    🔔 工作提醒
+                </h2>
+
+
+                <div
+                    id="reminderPopupStage"
+                    class="yao-reminder-stage"
+                >
+                    工作提醒
+                </div>
+
+            </div>
+
+
+            <div
+                class="yao-reminder-body"
+            >
+
+                <div
+                    id="reminderPopupProject"
+                    class="yao-reminder-project"
+                >
+                    案場
+                </div>
+
+
+                <div
+                    id="reminderPopupContent"
+                    class="yao-reminder-content"
+                >
+                    工作內容
+                </div>
+
+
+                <div
+                    id="reminderPopupTime"
+                    class="yao-reminder-time"
+                >
+                    工作時間
+                </div>
+
+
+                <div
+                    class="yao-reminder-actions"
+                >
+
+                    <button
+                        id="reminderPopupClose"
+                        type="button"
+                    >
+                        我知道了
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    document.body.appendChild(
+        popup
+    );
+
+
+    const closeButton =
+        document.querySelector(
+            "#reminderPopupClose"
+        );
+
+
+    if (closeButton) {
+
+        closeButton.onclick =
+            closeReminderPopup;
+
+    }
+
+
+    popup.addEventListener(
+        "click",
+        function (event) {
+
+            if (
+                event.target ===
+                popup
+            ) {
+
+                closeReminderPopup();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+★ 顯示下一個提醒
 ========================================================= */
 
 function showNextReminderPopup() {
@@ -3989,7 +4885,8 @@ function showNextReminderPopup() {
 
 
     if (
-        reminderPopupQueue.length === 0
+        reminderPopupQueue.length ===
+        0
     )
         return;
 
@@ -4006,285 +4903,12 @@ function showNextReminderPopup() {
 
 
 /* =========================================================
-★ 自動建立提醒 Popup
-========================================================= */
-
-function ensureReminderPopup() {
-
-    let backdrop =
-        document.querySelector(
-            "#reminderPopup"
-        );
-
-
-    /*
-     * 如果 HTML 已經有，
-     * 就直接使用。
-     */
-
-    if (backdrop) {
-
-        bindReminderPopupEvents();
-
-        return;
-
-    }
-
-
-    /*
-     * HTML 沒有的話，
-     * JavaScript 自己建立。
-     */
-
-    const popupHTML = `
-
-        <div
-            id="reminderPopup"
-            class="hidden"
-            style="
-                position:fixed;
-                inset:0;
-                z-index:99999;
-                background:rgba(0,0,0,.65);
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                padding:20px;
-                box-sizing:border-box;
-            "
-        >
-
-            <div
-                style="
-                    width:min(560px, 100%);
-                    background:#ffffff;
-                    color:#111827;
-                    border-radius:22px;
-                    box-shadow:0 25px 80px rgba(0,0,0,.35);
-                    overflow:hidden;
-                    animation:yaoReminderPop .22s ease-out;
-                "
-            >
-
-                <div
-                    style="
-                        padding:22px 24px;
-                        background:#dc2626;
-                        color:white;
-                    "
-                >
-
-                    <div
-                        id="reminderPopupTitle"
-                        style="
-                            font-size:24px;
-                            font-weight:800;
-                        "
-                    >
-                        🔔 工作提醒
-                    </div>
-
-                    <div
-                        id="reminderPopupStage"
-                        style="
-                            margin-top:6px;
-                            font-size:14px;
-                            opacity:.92;
-                        "
-                    >
-                    </div>
-
-                </div>
-
-
-                <div
-                    style="
-                        padding:24px;
-                    "
-                >
-
-                    <div
-                        id="reminderPopupProject"
-                        style="
-                            font-size:14px;
-                            color:#6b7280;
-                            font-weight:700;
-                            margin-bottom:12px;
-                        "
-                    >
-                    </div>
-
-
-                    <div
-                        id="reminderPopupContent"
-                        style="
-                            font-size:26px;
-                            line-height:1.35;
-                            font-weight:800;
-                            margin-bottom:18px;
-                        "
-                    >
-                    </div>
-
-
-                    <div
-                        id="reminderPopupTime"
-                        style="
-                            padding:14px 16px;
-                            background:#f3f4f6;
-                            border-radius:12px;
-                            font-size:15px;
-                            font-weight:600;
-                        "
-                    >
-                    </div>
-
-
-                    <button
-                        id="reminderPopupClose"
-                        type="button"
-                        style="
-                            width:100%;
-                            margin-top:22px;
-                            padding:15px;
-                            border:0;
-                            border-radius:12px;
-                            background:#111827;
-                            color:white;
-                            font-size:17px;
-                            font-weight:800;
-                            cursor:pointer;
-                        "
-                    >
-                        我知道了
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <style>
-
-            @keyframes yaoReminderPop {
-
-                from {
-
-                    opacity:0;
-
-                    transform:
-                        scale(.92)
-                        translateY(12px);
-
-                }
-
-                to {
-
-                    opacity:1;
-
-                    transform:
-                        scale(1)
-                        translateY(0);
-
-                }
-
-            }
-
-            body.reminder-popup-open {
-                overflow:hidden;
-            }
-
-        </style>
-
-    `;
-
-
-    document.body.insertAdjacentHTML(
-        "beforeend",
-        popupHTML
-    );
-
-
-    bindReminderPopupEvents();
-
-}
-
-
-/* =========================================================
-提醒 Popup 綁定事件
-========================================================= */
-
-function bindReminderPopupEvents() {
-
-    const closeButton =
-        document.querySelector(
-            "#reminderPopupClose"
-        );
-
-
-    if (
-        closeButton &&
-        !closeButton.dataset.bound
-    ) {
-
-        closeButton.dataset.bound =
-            "true";
-
-
-        closeButton.onclick =
-            closeReminderPopup;
-
-    }
-
-
-    const backdrop =
-        document.querySelector(
-            "#reminderPopup"
-        );
-
-
-    if (
-        backdrop &&
-        !backdrop.dataset.bound
-    ) {
-
-        backdrop.dataset.bound =
-            "true";
-
-
-        backdrop.addEventListener(
-            "click",
-            function (event) {
-
-                if (
-                    event.target ===
-                    backdrop
-                ) {
-
-                    closeReminderPopup();
-
-                }
-
-            }
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-大型提醒視窗
+★ 顯示提醒 Popup
 ========================================================= */
 
 function showReminderPopup(row) {
 
-    /*
-     * 確保 Popup 一定存在
-     */
-
-    ensureReminderPopup();
+    ensureReminderUI();
 
 
     const backdrop =
@@ -4333,7 +4957,7 @@ function showReminderPopup(row) {
     ) {
 
         console.error(
-            "YAO：提醒 Popup DOM 建立失敗"
+            "YAO：提醒視窗建立失敗"
         );
 
         return;
@@ -4350,39 +4974,20 @@ function showReminderPopup(row) {
 
 
     /*
-     * 依提醒類型顯示標題
+     * 標題
      */
 
-    if (
-        row.stage === 0
-    ) {
-
-        title.textContent =
-            "📌 工作時間到了";
-
-        backdrop.style.setProperty(
-            "--yao-reminder-color",
-            "#16a34a"
-        );
-
-    }
-
-    else if (
+    title.textContent =
         row.stage === 2
-    ) {
+        ?
+        "⏰ 一小時前提醒"
+        :
+        "🔔 工作提醒";
 
-        title.textContent =
-            "⏰ 一小時前提醒";
 
-    }
-
-    else {
-
-        title.textContent =
-            "🔔 工作提醒";
-
-    }
-
+    /*
+     * 案場
+     */
 
     projectBox.textContent =
         project
@@ -4392,98 +4997,42 @@ function showReminderPopup(row) {
         "未指定案場";
 
 
+    /*
+     * 工作
+     */
+
     contentBox.textContent =
         row.item.title ||
         "未命名工作";
 
 
+    /*
+     * 時間
+     */
+
     timeBox.textContent =
-        `工作時間：${row.item.time || "09:00"}　｜　提醒時間：${row.time}`;
-
-
-    if (
-        row.stage === 0
-    ) {
-
-        stageBox.textContent =
-            "現在就是工作時間，請處理這項工作。";
-
-    }
-
-    else if (
-        row.stage === 2
-    ) {
-
-        stageBox.textContent =
-            "第二階段提醒：工作前 1 小時";
-
-    }
-
-    else {
-
-        stageBox.textContent =
-            `第一階段提醒：${row.label}`;
-
-    }
+        `工作時間：${normalizeTime(row.item.time || "09:00")}　｜　提醒時間：${row.time}`;
 
 
     /*
-     * 如果是 stage 0，
-     * 頂部改成綠色。
+     * 提醒階段
      */
 
-    if (
-        row.stage === 0
-    ) {
-
-        const header =
-            backdrop.querySelector(
-                "#reminderPopupTitle"
-            )?.parentElement;
-
-
-        if (header) {
-
-            header.style.background =
-                "#16a34a";
-
-        }
-
-    }
-
-    else {
-
-        const header =
-            backdrop.querySelector(
-                "#reminderPopupTitle"
-            )?.parentElement;
-
-
-        if (header) {
-
-            header.style.background =
-                "#dc2626";
-
-        }
-
-    }
+    stageBox.textContent =
+        row.stage === 2
+        ?
+        "第二階段提醒：工作前 1 小時"
+        :
+        `第一階段提醒：${row.label}`;
 
 
     /*
      * 顯示
-     *
-     * 注意：
-     * 你的 .hidden CSS 可能使用 display:none。
-     * 這裡直接移除 hidden。
      */
 
     backdrop.classList.remove(
         "hidden"
     );
-
-
-    backdrop.style.display =
-        "flex";
 
 
     document.body.classList.add(
@@ -4514,14 +5063,46 @@ function showReminderPopup(row) {
         100
     );
 
+
+    /*
+     * 瀏覽器標題
+     */
+
+    const oldTitle =
+        document.title;
+
+
+    document.title =
+        "🔔 YAO 工作提醒";
+
+
+    setTimeout(
+        () => {
+
+            if (
+                document.title ===
+                "🔔 YAO 工作提醒"
+            ) {
+
+                document.title =
+                    oldTitle;
+
+            }
+
+        },
+        5000
+    );
+
 }
 
 
 /* =========================================================
-關閉大型提醒
+★ 關閉提醒
 ========================================================= */
 
-function closeReminderPopup() {
+function closeReminderPopup(
+    force = false
+) {
 
     const backdrop =
         document.querySelector(
@@ -4534,10 +5115,6 @@ function closeReminderPopup() {
         backdrop.classList.add(
             "hidden"
         );
-
-
-        backdrop.style.display =
-            "none";
 
     }
 
@@ -4552,7 +5129,20 @@ function closeReminderPopup() {
 
 
     /*
-     * 關閉後繼續下一個
+     * 登出時不繼續顯示。
+     */
+
+    if (force) {
+
+        reminderPopupQueue = [];
+
+        return;
+
+    }
+
+
+    /*
+     * 下一個提醒
      */
 
     setTimeout(
@@ -4589,85 +5179,6 @@ document.addEventListener(
 
 
 /* =========================================================
-啟動提醒檢查器
-========================================================= */
-
-function startReminderChecker() {
-
-    stopReminderChecker();
-
-
-    /*
-     * 確保 Popup 存在
-     */
-
-    ensureReminderPopup();
-
-
-    /*
-     * 登入後立刻檢查
-     */
-
-    setTimeout(
-        () => {
-
-            checkDueReminders();
-
-        },
-        1000
-    );
-
-
-    /*
-     * ★ 每 10 秒檢查一次
-     *
-     * 原本 30 秒。
-     *
-     * 現在改成 10 秒，
-     * 減少提醒延遲。
-     */
-
-    reminderCheckTimer =
-        setInterval(
-            () => {
-
-                isoToday =
-                    getTodayISO();
-
-
-                checkDueReminders();
-
-            },
-            10000
-        );
-
-}
-
-
-/* =========================================================
-停止提醒檢查器
-========================================================= */
-
-function stopReminderChecker() {
-
-    if (
-        reminderCheckTimer
-    ) {
-
-        clearInterval(
-            reminderCheckTimer
-        );
-
-
-        reminderCheckTimer =
-            null;
-
-    }
-
-}
-
-
-/* =========================================================
 工作表單
 ========================================================= */
 
@@ -4698,7 +5209,6 @@ if (itemForm) {
                     "請先選擇案場。"
                 );
 
-
                 return;
 
             }
@@ -4726,9 +5236,11 @@ if (itemForm) {
                     ).value,
 
                 time:
-                    document.querySelector(
-                        "#itemTime"
-                    ).value,
+                    normalizeTime(
+                        document.querySelector(
+                            "#itemTime"
+                        ).value || "09:00"
+                    ),
 
                 title:
                     document.querySelector(
@@ -4764,7 +5276,6 @@ if (itemForm) {
                     "請輸入工作內容。"
                 );
 
-
                 return;
 
             }
@@ -4775,19 +5286,6 @@ if (itemForm) {
                 alert(
                     "請選擇工作日期。"
                 );
-
-
-                return;
-
-            }
-
-
-            if (!data.time) {
-
-                alert(
-                    "請設定工作時間。"
-                );
-
 
                 return;
 
@@ -4809,6 +5307,15 @@ if (itemForm) {
                         );
 
 
+                    /*
+                     * 修改前先清除舊提醒紀錄。
+                     */
+
+                    clearReminderHistoryForItem(
+                        editingItemId
+                    );
+
+
                     await updateDoc(
                         doc(
                             db,
@@ -4828,11 +5335,6 @@ if (itemForm) {
                         }
                     );
 
-
-                    /*
-                     * 如果修改提醒設定，
-                     * 新時間會產生新的提醒 Key。
-                     */
 
                     toast(
                         "資料已修改"
@@ -4857,6 +5359,24 @@ if (itemForm) {
 
                 closeItemModal();
 
+
+                /*
+                 * 儲存後立即重新檢查提醒。
+                 *
+                 * 如果使用者建立一筆
+                 * 已經到提醒時間的工作，
+                 * 不需要等 30 秒。
+                 */
+
+                setTimeout(
+                    () => {
+
+                        checkDueReminders();
+
+                    },
+                    500
+                );
+
             }
 
             catch (error) {
@@ -4875,6 +5395,66 @@ if (itemForm) {
 
         }
     );
+
+}
+
+
+/* =========================================================
+清除某筆工作舊提醒記錄
+========================================================= */
+
+function clearReminderHistoryForItem(
+    itemId
+) {
+
+    const shown =
+        getShownReminderKeys();
+
+
+    let changed =
+        false;
+
+
+    Object.keys(shown)
+        .forEach(
+            key => {
+
+                if (
+                    key.includes(
+                        `|${itemId}|`
+                    )
+                ) {
+
+                    delete shown[key];
+
+                    changed = true;
+
+                }
+
+            }
+        );
+
+
+    if (!changed)
+        return;
+
+
+    try {
+
+        localStorage.setItem(
+            REMINDER_STORAGE_KEY,
+            JSON.stringify(shown)
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            error
+        );
+
+    }
 
 }
 
@@ -4933,7 +5513,6 @@ if (projectForm) {
                 alert(
                     "請輸入案場名稱。"
                 );
-
 
                 return;
 
@@ -5126,6 +5705,47 @@ if (headerAddBtn) {
 
 
 /* =========================================================
+通知權限
+=========================================================
+
+第一次點擊網站時嘗試請求。
+
+注意：
+Chrome / Edge / Safari 對通知權限通常要求
+使用者互動，所以不能單純在登入時強制要求。
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function () {
+
+        if (!currentUser)
+            return;
+
+
+        if (
+            !("Notification" in window)
+        )
+            return;
+
+
+        if (
+            Notification.permission ===
+            "default"
+        ) {
+
+            requestNotificationPermission();
+
+        }
+
+    },
+    {
+        once: true
+    }
+);
+
+
+/* =========================================================
 關閉工作 Modal
 ========================================================= */
 
@@ -5190,7 +5810,7 @@ if (cancelProjectBtn) {
 
 
 /* =========================================================
-背景點擊關閉 Modal
+背景點擊關閉工作 Modal
 ========================================================= */
 
 const itemModal =
@@ -5219,6 +5839,10 @@ if (itemModal) {
 
 }
 
+
+/* =========================================================
+背景點擊關閉案場 Modal
+========================================================= */
 
 const projectModal =
     document.querySelector(
@@ -5317,13 +5941,28 @@ window.goCalendarToday =
 
 
 /* =========================================================
+提醒相關全域函式
+========================================================= */
+
+window.checkDueReminders =
+    checkDueReminders;
+
+window.closeReminderPopup =
+    closeReminderPopup;
+
+
+/* =========================================================
 初始化
 ========================================================= */
 
 console.log(
-    "YAO V4.5 Firebase 系統已啟動"
+    "YAO V5.0 Firebase 系統已啟動"
 );
 
 console.log(
-    "YAO 提醒系統：工作時間 / 提前 N 天 / 提前 1 小時"
+    "YAO V5.0 提醒系統已啟動"
+);
+
+console.log(
+    "YAO V5.0 提醒檢查：每 30 秒 + 網頁重新取得焦點"
 );

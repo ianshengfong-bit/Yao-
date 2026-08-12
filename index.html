@@ -77,6 +77,7 @@
 
             </label>
 
+
             <label>
 
                 密碼
@@ -91,6 +92,7 @@
 
             </label>
 
+
             <button
                 type="submit"
                 class="btn primary login-btn"
@@ -98,6 +100,7 @@
             >
                 登入系統
             </button>
+
 
             <div
                 id="loginError"
@@ -109,6 +112,7 @@
     </div>
 
 </div>
+
 
 
 <!-- =====================================================
@@ -127,11 +131,13 @@
 
     <aside class="sidebar">
 
+
         <div class="brand">
 
             <div class="logo">
                 🌪️
             </div>
+
 
             <div>
 
@@ -148,11 +154,13 @@
         </div>
 
 
+
         <!-- =============================
              導覽
         ============================== -->
 
         <nav id="nav">
+
 
             <button
                 class="nav-item active"
@@ -161,12 +169,14 @@
                 🏠 儀表板
             </button>
 
+
             <button
                 class="nav-item"
                 data-page="calendar"
             >
                 📅 行事曆
             </button>
+
 
             <button
                 class="nav-item"
@@ -175,12 +185,14 @@
                 🏗️ 案場
             </button>
 
+
             <button
                 class="nav-item"
                 data-page="logistics"
             >
                 📦 進料 / 出貨
             </button>
+
 
             <button
                 class="nav-item"
@@ -189,12 +201,14 @@
                 👷 人員安排
             </button>
 
+
             <button
                 class="nav-item"
                 data-page="inspection"
             >
                 🔍 查驗
             </button>
+
 
             <button
                 class="nav-item"
@@ -203,7 +217,21 @@
                 📝 工作紀錄
             </button>
 
+
+            <!-- =============================
+                 提醒中心
+            ============================== -->
+
+            <button
+                class="nav-item"
+                data-page="reminders"
+            >
+                🔔 提醒中心
+            </button>
+
+
         </nav>
+
 
 
         <!-- =============================
@@ -212,12 +240,14 @@
 
         <div class="sidebar-bottom">
 
+
             <button
                 class="quick-add"
                 id="quickAddBtn"
             >
                 ＋ 快速新增
             </button>
+
 
             <button
                 class="logout-btn"
@@ -226,13 +256,17 @@
                 🚪 登出
             </button>
 
+
             <small>
                 Yao · Firebase
             </small>
 
+
         </div>
 
+
     </aside>
+
 
 
     <!-- =================================================
@@ -241,11 +275,13 @@
 
     <main class="main">
 
+
         <!-- =============================
              頂部
         ============================== -->
 
         <header class="topbar">
+
 
             <div>
 
@@ -253,13 +289,16 @@
                     消防工程行政
                 </div>
 
+
                 <h1 id="pageTitle">
                     儀表板
                 </h1>
 
             </div>
 
+
             <div class="top-actions">
+
 
                 <input
                     id="searchInput"
@@ -269,6 +308,7 @@
                     autocomplete="off"
                 >
 
+
                 <button
                     class="btn primary"
                     id="headerAddBtn"
@@ -276,9 +316,12 @@
                     ＋ 新增
                 </button>
 
+
             </div>
 
+
         </header>
+
 
 
         <!-- =============================
@@ -287,9 +330,12 @@
 
         <section id="app"></section>
 
+
     </main>
 
+
 </div>
+
 
 
 <!-- =====================================================
@@ -303,11 +349,13 @@
 
     <div class="modal">
 
+
         <div class="modal-head">
 
             <h2 id="itemModalTitle">
                 新增資料
             </h2>
+
 
             <button
                 type="button"
@@ -321,9 +369,9 @@
         </div>
 
 
+
         <form id="itemForm">
 
-            <!-- 類型 -->
 
             <label>
 
@@ -360,7 +408,6 @@
             </label>
 
 
-            <!-- 案場 -->
 
             <label>
 
@@ -379,6 +426,7 @@
 
             </label>
 
+
             <div
                 class="form-hint"
                 id="projectHint"
@@ -387,7 +435,6 @@
             </div>
 
 
-            <!-- 日期 / 時間 -->
 
             <div class="form-grid">
 
@@ -403,6 +450,7 @@
 
                 </label>
 
+
                 <label>
 
                     時間
@@ -417,7 +465,6 @@
             </div>
 
 
-            <!-- 標題 -->
 
             <label>
 
@@ -432,7 +479,6 @@
             </label>
 
 
-            <!-- 備註 -->
 
             <label>
 
@@ -447,11 +493,10 @@
             </label>
 
 
-            <!-- 提醒 -->
 
             <label>
 
-                提醒
+                第一階段提醒
 
                 <select id="itemReminder">
 
@@ -476,7 +521,41 @@
             </label>
 
 
-            <!-- 按鈕 -->
+
+            <label>
+
+                <span
+                    style="
+                        display:flex;
+                        align-items:center;
+                        gap:8px;
+                    "
+                >
+
+                    <input
+                        id="itemOneHourReminder"
+                        type="checkbox"
+                        style="
+                            width:auto;
+                            margin:0;
+                        "
+                    >
+
+                    當天提前 1 小時提醒
+
+                </span>
+
+
+                <div
+                    class="form-hint"
+                    style="margin-top:6px"
+                >
+                    例如工作時間為 09:00，將於當天 08:00 再提醒一次
+                </div>
+
+            </label>
+
+
 
             <div class="modal-actions">
 
@@ -488,6 +567,7 @@
                     取消
                 </button>
 
+
                 <button
                     type="submit"
                     class="btn primary"
@@ -498,11 +578,13 @@
 
             </div>
 
+
         </form>
 
     </div>
 
 </div>
+
 
 
 <!-- =====================================================
@@ -516,11 +598,13 @@
 
     <div class="modal">
 
+
         <div class="modal-head">
 
             <h2 id="projectModalTitle">
                 新增案場
             </h2>
+
 
             <button
                 type="button"
@@ -534,9 +618,9 @@
         </div>
 
 
+
         <form id="projectForm">
 
-            <!-- 案場名稱 -->
 
             <label>
 
@@ -551,8 +635,6 @@
             </label>
 
 
-            <!-- 地址 -->
-
             <label>
 
                 地址
@@ -564,8 +646,6 @@
 
             </label>
 
-
-            <!-- 聯絡人 / 電話 -->
 
             <div class="form-grid">
 
@@ -579,6 +659,7 @@
                     >
 
                 </label>
+
 
                 <label>
 
@@ -595,8 +676,6 @@
             </div>
 
 
-            <!-- 備註 -->
-
             <label>
 
                 備註
@@ -610,8 +689,6 @@
             </label>
 
 
-            <!-- 按鈕 -->
-
             <div class="modal-actions">
 
                 <button
@@ -622,6 +699,7 @@
                     取消
                 </button>
 
+
                 <button
                     type="submit"
                     class="btn primary"
@@ -631,11 +709,90 @@
 
             </div>
 
+
         </form>
 
     </div>
 
 </div>
+
+
+
+<!-- =====================================================
+     ★ 大型提醒視窗
+===================================================== -->
+
+<div
+    id="reminderPopup"
+    class="reminder-popup-backdrop hidden"
+>
+
+    <div
+        class="reminder-popup"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="reminderPopupTitle"
+    >
+
+        <div class="reminder-popup-icon">
+            🔔
+        </div>
+
+
+        <div class="reminder-popup-label">
+            YAO 工作提醒
+        </div>
+
+
+        <h2 id="reminderPopupTitle">
+            工作提醒
+        </h2>
+
+
+        <div
+            id="reminderPopupProject"
+            class="reminder-popup-project"
+        >
+        </div>
+
+
+        <div
+            id="reminderPopupContent"
+            class="reminder-popup-content"
+        >
+        </div>
+
+
+        <div
+            id="reminderPopupTime"
+            class="reminder-popup-time"
+        >
+        </div>
+
+
+        <div
+            id="reminderPopupStage"
+            class="reminder-popup-stage"
+        >
+        </div>
+
+
+        <div class="reminder-popup-actions">
+
+            <button
+                type="button"
+                class="btn primary reminder-popup-ok"
+                id="reminderPopupClose"
+            >
+                ✓ 知道了
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
 
 
 <!-- =====================================================
@@ -650,6 +807,7 @@
 ></div>
 
 
+
 <!-- =====================================================
      Firebase / Yao
 ===================================================== -->
@@ -658,6 +816,7 @@
     type="module"
     src="./app.js"
 ></script>
+
 
 
 <!-- =====================================================

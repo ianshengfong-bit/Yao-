@@ -34,7 +34,9 @@
 
 </head>
 
+
 <body>
+
 
 <!-- =====================================================
      Firebase 登入
@@ -118,6 +120,7 @@
     class="hidden"
 >
 
+
     <!-- =================================================
          左側選單
     ================================================== -->
@@ -198,18 +201,6 @@
                 data-page="records"
             >
                 📝 工作紀錄
-            </button>
-
-            <!-- =================================================
-                 新增：提醒中心
-                 不修改原本其他選單
-            ================================================== -->
-
-            <button
-                class="nav-item"
-                data-page="reminders"
-            >
-                🔔 提醒中心
             </button>
 
         </nav>
@@ -456,11 +447,11 @@
             </label>
 
 
-            <!-- 第一階段提醒 -->
+            <!-- 提醒 -->
 
             <label>
 
-                第一階段提醒
+                提醒
 
                 <select id="itemReminder">
 
@@ -481,39 +472,6 @@
                     </option>
 
                 </select>
-
-            </label>
-
-
-            <!-- 第二階段提醒 -->
-
-            <label>
-
-                <span style="
-                    display:flex;
-                    align-items:center;
-                    gap:8px;
-                ">
-
-                    <input
-                        id="itemOneHourReminder"
-                        type="checkbox"
-                        style="
-                            width:auto;
-                            margin:0;
-                        "
-                    >
-
-                    當天提前 1 小時提醒
-
-                </span>
-
-                <div
-                    class="form-hint"
-                    style="margin-top:6px"
-                >
-                    例如工作時間為 09:00，將於當天 08:00 再提醒一次
-                </div>
 
             </label>
 
@@ -578,6 +536,8 @@
 
         <form id="projectForm">
 
+            <!-- 案場名稱 -->
+
             <label>
 
                 案場名稱
@@ -591,6 +551,8 @@
             </label>
 
 
+            <!-- 地址 -->
+
             <label>
 
                 地址
@@ -602,6 +564,8 @@
 
             </label>
 
+
+            <!-- 聯絡人 / 電話 -->
 
             <div class="form-grid">
 
@@ -631,6 +595,8 @@
             </div>
 
 
+            <!-- 備註 -->
+
             <label>
 
                 備註
@@ -643,6 +609,8 @@
 
             </label>
 
+
+            <!-- 按鈕 -->
 
             <div class="modal-actions">
 
@@ -740,6 +708,7 @@ if ("serviceWorker" in navigator) {
         }
     );
 
+
     navigator.serviceWorker.addEventListener(
         "controllerchange",
         () => {
@@ -761,6 +730,7 @@ if ("serviceWorker" in navigator) {
 }
 
 </script>
+
 
 </body>
 

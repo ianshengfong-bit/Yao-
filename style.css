@@ -1,13 +1,13 @@
 /* =========================================================
-   YAO V3
+   YAO V5
    消防工程行政管理系統
    style.css
-   ========================================================= */
+========================================================= */
 
 
 /* =========================================================
    基礎設定
-   ========================================================= */
+========================================================= */
 
 * {
     box-sizing: border-box;
@@ -23,6 +23,7 @@ body {
 
 html {
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
 }
 
 body {
@@ -41,7 +42,7 @@ body {
 
 /* =========================================================
    左側選單｜電腦版
-   ========================================================= */
+========================================================= */
 
 .sidebar {
     position: fixed;
@@ -199,7 +200,7 @@ body {
 
 /* =========================================================
    主畫面
-   ========================================================= */
+========================================================= */
 
 .main {
     margin-left: 240px;
@@ -283,7 +284,7 @@ body {
 
 /* =========================================================
    按鈕
-   ========================================================= */
+========================================================= */
 
 .btn {
     border: 1px solid #d9dee7;
@@ -380,7 +381,7 @@ body {
 
 /* =========================================================
    通用
-   ========================================================= */
+========================================================= */
 
 .grid {
     display: grid;
@@ -452,7 +453,7 @@ body {
 
 /* =========================================================
    資料列表
-   ========================================================= */
+========================================================= */
 
 .list {
     display: flex;
@@ -583,7 +584,7 @@ body {
 
 /* =========================================================
    案場
-   ========================================================= */
+========================================================= */
 
 .project-toolbar {
     display: flex;
@@ -699,14 +700,163 @@ body {
 
 
 /* =========================================================
-   行事曆
-   ========================================================= */
+   行事曆｜月份控制區
+========================================================= */
+
+.calendar-wrapper {
+    width: 100%;
+
+    min-width: 0;
+}
+
+.calendar-toolbar {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 14px;
+
+    background: white;
+
+    border: 1px solid #e4e8ef;
+
+    border-radius: 13px;
+
+    padding: 12px 14px;
+}
+
+.calendar-month-title {
+    flex: 1;
+
+    text-align: center;
+
+    font-size: 20px;
+
+    font-weight: 800;
+
+    color: #172033;
+
+    line-height: 1.3;
+}
+
+.calendar-month-title span {
+    display: block;
+
+    color: #7b8494;
+
+    font-size: 11px;
+
+    font-weight: 500;
+
+    margin-top: 2px;
+}
+
+.calendar-nav {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+}
+
+.calendar-nav-btn {
+    width: 40px;
+
+    height: 40px;
+
+    border: 1px solid #d9dee7;
+
+    background: white;
+
+    color: #172033;
+
+    border-radius: 9px;
+
+    cursor: pointer;
+
+    display: grid;
+
+    place-items: center;
+
+    font-size: 17px;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+}
+
+.calendar-nav-btn:hover {
+    background: #f8fafc;
+
+    border-color: #cbd5e1;
+}
+
+.calendar-nav-btn:active {
+    transform: scale(0.95);
+}
+
+.calendar-today-btn {
+    padding:
+        8px 12px;
+
+    border: 1px solid #d9dee7;
+
+    background: white;
+
+    color: #172033;
+
+    border-radius: 9px;
+
+    cursor: pointer;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.calendar-today-btn:hover {
+    background: #f8fafc;
+
+    border-color: #cbd5e1;
+}
+
+
+/* =========================================================
+   行事曆｜本體
+========================================================= */
+
+.calendar-scroll {
+    width: 100%;
+
+    overflow-x: auto;
+
+    overflow-y: hidden;
+
+    border-radius: 13px;
+
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: thin;
+}
 
 .calendar {
     display: grid;
 
     grid-template-columns:
         repeat(7, minmax(0, 1fr));
+
+    width: 100%;
+
+    min-width: 700px;
 
     background: white;
 
@@ -727,13 +877,23 @@ body {
 
     font-size: 12px;
 
+    font-weight: 700;
+
     color: #6b7280;
 
-    border-right: 1px solid #edf0f4;
+    border-right:
+        1px solid #edf0f4;
+
+    border-bottom:
+        1px solid #edf0f4;
+}
+
+.weekday:last-child {
+    border-right: 0;
 }
 
 .day {
-    min-height: 115px;
+    min-height: 125px;
 
     border-right:
         1px solid #edf0f4;
@@ -746,6 +906,15 @@ body {
     min-width: 0;
 
     background: white;
+
+    position: relative;
+
+    transition:
+        background 0.15s ease;
+}
+
+.day:hover {
+    background: #fafbfc;
 }
 
 .day:nth-child(7n) {
@@ -753,11 +922,41 @@ body {
 }
 
 .day-num {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-width: 27px;
+
+    height: 27px;
+
+    padding: 0 5px;
+
     font-size: 12px;
 
     color: #6b7280;
 
-    font-weight: 600;
+    font-weight: 700;
+
+    border-radius: 50%;
+}
+
+.day.today {
+    background: #f8fafc;
+}
+
+.day.today .day-num {
+    background: #172033;
+
+    color: white;
+}
+
+.day.other-month {
+    background: #fafafa;
+
+    opacity: 0.55;
 }
 
 .event {
@@ -816,10 +1015,31 @@ body {
     color: #9a3412;
 }
 
+.event.gray {
+    background: #e5e7eb;
+
+    color: #4b5563;
+}
+
+
+/* =========================================================
+   行事曆｜沒有資料
+========================================================= */
+
+.calendar-empty {
+    padding: 45px 20px;
+
+    text-align: center;
+
+    color: #8a93a2;
+
+    font-size: 13px;
+}
+
 
 /* =========================================================
    彈窗
-   ========================================================= */
+========================================================= */
 
 .modal-backdrop {
     position: fixed;
@@ -976,7 +1196,7 @@ body {
 
 /* =========================================================
    空白狀態
-   ========================================================= */
+========================================================= */
 
 .empty {
     padding: 35px;
@@ -990,8 +1210,26 @@ body {
 
 
 /* =========================================================
+   Loading
+========================================================= */
+
+.loading-card {
+    text-align: center;
+
+    padding:
+        50px 20px;
+}
+
+.loading-spinner {
+    font-size: 30px;
+
+    margin-bottom: 10px;
+}
+
+
+/* =========================================================
    Toast
-   ========================================================= */
+========================================================= */
 
 .toast {
     position: fixed;
@@ -1020,7 +1258,8 @@ body {
 
     z-index: 200;
 
-    max-width: calc(100vw - 40px);
+    max-width:
+        calc(100vw - 40px);
 
     font-size: 13px;
 }
@@ -1034,7 +1273,7 @@ body {
 
 /* =========================================================
    滾動條
-   ========================================================= */
+========================================================= */
 
 ::-webkit-scrollbar {
     width: 8px;
@@ -1058,20 +1297,20 @@ body {
 
 
 /* =========================================================
-   手機版
+   平板 / 手機
    768px 以下
-   ========================================================= */
+========================================================= */
 
 @media screen and (max-width: 768px) {
 
     body {
-        padding-bottom: 68px;
+        padding-bottom: 20px;
     }
 
 
     /* -------------------------
-       側邊欄改成上方橫向區域
-       ------------------------- */
+       頂部導航
+    ------------------------- */
 
     .sidebar {
         position: fixed;
@@ -1133,7 +1372,7 @@ body {
 
     /* -------------------------
        手機選單橫向滑動
-       ------------------------- */
+    ------------------------- */
 
     .sidebar nav {
         display: flex;
@@ -1184,8 +1423,8 @@ body {
 
 
     /* -------------------------
-       快速新增
-       ------------------------- */
+       底部選單
+    ------------------------- */
 
     .sidebar-bottom {
         display: none;
@@ -1194,7 +1433,7 @@ body {
 
     /* -------------------------
        主畫面
-       ------------------------- */
+    ------------------------- */
 
     .main {
         margin-left: 0;
@@ -1251,7 +1490,7 @@ body {
 
     /* -------------------------
        統計卡片
-       ------------------------- */
+    ------------------------- */
 
     .stats {
         grid-template-columns:
@@ -1273,7 +1512,7 @@ body {
 
     /* -------------------------
        雙欄改單欄
-       ------------------------- */
+    ------------------------- */
 
     .two-col {
         grid-template-columns: 1fr;
@@ -1281,8 +1520,8 @@ body {
 
 
     /* -------------------------
-       案場改單欄
-       ------------------------- */
+       案場
+    ------------------------- */
 
     .project-grid {
         grid-template-columns: 1fr;
@@ -1305,7 +1544,7 @@ body {
 
     /* -------------------------
        工作列表
-       ------------------------- */
+    ------------------------- */
 
     .list-row {
         flex-direction: column;
@@ -1325,11 +1564,54 @@ body {
 
     /* -------------------------
        行事曆
-       ------------------------- */
+    ------------------------- */
+
+    .calendar-wrapper {
+        width: 100%;
+
+        overflow: hidden;
+    }
+
+
+    .calendar-toolbar {
+        padding: 10px;
+
+        gap: 8px;
+    }
+
+
+    .calendar-month-title {
+        font-size: 17px;
+
+        white-space: nowrap;
+    }
+
+
+    .calendar-nav-btn {
+        width: 38px;
+
+        height: 38px;
+    }
+
+
+    .calendar-today-btn {
+        padding:
+            8px 9px;
+
+        font-size: 11px;
+    }
+
+
+    .calendar-scroll {
+        overflow-x: auto;
+
+        width: 100%;
+
+        padding-bottom: 4px;
+    }
+
 
     .calendar {
-        display: grid;
-
         grid-template-columns:
             repeat(7, 100px);
 
@@ -1339,18 +1621,24 @@ body {
     }
 
 
-    /* 讓行事曆可以水平滑動 */
+    .day {
+        min-height: 115px;
 
-    #app {
-        min-width: 0;
+        padding: 7px;
+    }
 
-        overflow-x: auto;
+
+    .event {
+        font-size: 10px;
+
+        padding:
+            5px 5px;
     }
 
 
     /* -------------------------
        表單
-       ------------------------- */
+    ------------------------- */
 
     .form-grid {
         grid-template-columns: 1fr;
@@ -1367,7 +1655,7 @@ body {
 
     /* -------------------------
        彈窗
-       ------------------------- */
+    ------------------------- */
 
     .modal-backdrop {
         padding: 10px;
@@ -1399,14 +1687,14 @@ body {
 
     /* -------------------------
        Toast
-       ------------------------- */
+    ------------------------- */
 
     .toast {
         left: 10px;
 
         right: 10px;
 
-        bottom: 78px;
+        bottom: 20px;
 
         text-align: center;
 
@@ -1418,7 +1706,7 @@ body {
 /* =========================================================
    小手機
    480px 以下
-   ========================================================= */
+========================================================= */
 
 @media screen and (max-width: 480px) {
 
@@ -1532,6 +1820,73 @@ body {
     }
 
 
+    /* -------------------------
+       小手機行事曆
+    ------------------------- */
+
+    .calendar-toolbar {
+        display: grid;
+
+        grid-template-columns:
+            auto
+            1fr
+            auto;
+
+        align-items: center;
+
+        gap: 5px;
+    }
+
+
+    .calendar-month-title {
+        font-size: 16px;
+    }
+
+
+    .calendar-month-title span {
+        font-size: 9px;
+    }
+
+
+    .calendar-nav {
+        display: contents;
+    }
+
+
+    .calendar-nav-btn {
+        width: 36px;
+
+        height: 36px;
+
+        font-size: 15px;
+    }
+
+
+    .calendar-today-btn {
+        grid-column:
+            1 / -1;
+
+        width: 100%;
+
+        margin-top: 4px;
+    }
+
+
+    .calendar {
+        grid-template-columns:
+            repeat(7, 95px);
+
+        width: 665px;
+
+        min-width: 665px;
+    }
+
+
+    .day {
+        min-height: 105px;
+    }
+
+
     .toast {
         bottom: 70px;
     }
@@ -1541,7 +1896,7 @@ body {
 /* =========================================================
    超小手機
    360px 以下
-   ========================================================= */
+========================================================= */
 
 @media screen and (max-width: 360px) {
 
@@ -1587,12 +1942,45 @@ body {
     .stats {
         grid-template-columns: 1fr;
     }
+
+
+    /* -------------------------
+       超小手機行事曆
+    ------------------------- */
+
+    .calendar-month-title {
+        font-size: 15px;
+    }
+
+
+    .calendar {
+        grid-template-columns:
+            repeat(7, 90px);
+
+        width: 630px;
+
+        min-width: 630px;
+    }
+
+
+    .day {
+        min-height: 100px;
+
+        padding: 6px;
+    }
+
+
+    .day-num {
+        min-width: 25px;
+
+        height: 25px;
+    }
 }
 
 
 /* =========================================================
    觸控裝置優化
-   ========================================================= */
+========================================================= */
 
 @media (hover: none) and (pointer: coarse) {
 
@@ -1600,16 +1988,27 @@ body {
     .btn,
     .mini-btn,
     .quick-add,
-    .icon-btn {
+    .icon-btn,
+    .calendar-nav-btn,
+    .calendar-today-btn {
         -webkit-tap-highlight-color: transparent;
     }
+
 
     .mini-btn {
         min-height: 38px;
     }
 
+
     .btn {
         min-height: 42px;
+    }
+
+
+    .calendar-nav-btn {
+        min-width: 38px;
+
+        min-height: 38px;
     }
 }
 
@@ -1617,7 +2016,7 @@ body {
 /* =========================================================
    安全區域
    適合 iPhone / 部分瀏海手機
-   ========================================================= */
+========================================================= */
 
 @supports (padding: env(safe-area-inset-top)) {
 
@@ -1625,12 +2024,38 @@ body {
 
         .sidebar {
             padding-top:
-                calc(7px + env(safe-area-inset-top));
+                calc(
+                    7px +
+                    env(safe-area-inset-top)
+                );
         }
+
 
         .main {
             padding-top:
-                calc(78px + env(safe-area-inset-top));
+                calc(
+                    78px +
+                    env(safe-area-inset-top)
+                );
+        }
+    }
+}
+
+
+/* =========================================================
+   行事曆手機安全區域
+========================================================= */
+
+@supports (padding: env(safe-area-inset-bottom)) {
+
+    @media screen and (max-width: 768px) {
+
+        .calendar-scroll {
+            padding-bottom:
+                calc(
+                    6px +
+                    env(safe-area-inset-bottom)
+                );
         }
     }
 }

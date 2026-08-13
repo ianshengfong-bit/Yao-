@@ -1725,6 +1725,120 @@ function viewProject(id) {
         );
 
 
+    /*
+     * 案場內的工作分成兩區：
+     *
+     * 1. 進行中：done !== true
+     * 2. 已結束：done === true
+     *
+     * 不修改 Firestore 原本的資料結構，
+     * 只改變這個案場頁面的顯示方式。
+     */
+
+    const activeItems =
+        [...projectItems]
+            .filter(
+                item =>
+                    item.done !== true
+            )
+            .sort(
+                (a, b) =>
+                    `${a.date || ""} ${a.time || ""}`
+                    .localeCompare(
+                        `${b.date || ""} ${b.time || ""}`
+                    )
+            );
+
+
+    const completedItems =
+        [...projectItems]
+            .filter(
+                item =>
+                    item.done === true
+            )
+            .sort(
+                (a, b) =>
+                    `${b.date || ""} ${b.time || ""}`
+                    .localeCompare(
+                        `${a.date || ""} ${a.time || ""}`
+                    )
+            );
+
+
+    const activeHTML =
+        activeItems.length
+        ?
+        activeItems
+            .map(itemRow)
+            .join("")
+        :
+        `
+        <div class="empty">
+            目前沒有進行中的工作
+        </div>
+        `;
+
+
+    const completedHTML =
+        completedItems.length
+        ?
+        `
+        <details
+            style="
+                margin-top:16px;
+                border:1px solid #e5e7eb;
+                border-radius:14px;
+                background:#fafafa;
+                overflow:hidden;
+            "
+        >
+
+            <summary
+                style="
+                    cursor:pointer;
+                    padding:16px 18px;
+                    font-weight:700;
+                    color:#374151;
+                    list-style-position:inside;
+                    user-select:none;
+                "
+            >
+                ✅ 已結束
+                <span
+                    style="
+                        display:inline-flex;
+                        align-items:center;
+                        justify-content:center;
+                        min-width:28px;
+                        height:24px;
+                        padding:0 8px;
+                        margin-left:8px;
+                        border-radius:12px;
+                        background:#e5e7eb;
+                        font-size:13px;
+                        font-weight:600;
+                    "
+                >
+                    ${completedItems.length}
+                </span>
+            </summary>
+
+            <div
+                class="list"
+                style="
+                    padding:0 10px 10px;
+                    border-top:1px solid #e5e7eb;
+                "
+            >
+                ${completedItems.map(itemRow).join("")}
+            </div>
+
+        </details>
+        `
+        :
+        "";
+
+
     app.innerHTML = `
 
         <div class="project-toolbar">
@@ -1775,30 +1889,35 @@ function viewProject(id) {
             </h3>
 
 
-            <div class="list">
-
-                ${
-                    projectItems.length
-                    ?
-                    [...projectItems]
-                        .sort(
-                            (a, b) =>
-                                (a.date || "")
-                                .localeCompare(
-                                    b.date || ""
-                                )
-                        )
-                        .map(itemRow)
-                        .join("")
-                    :
-                    `
-                    <div class="empty">
-                        這個案場目前還沒有工作
-                    </div>
-                    `
-                }
-
+            <div
+                style="
+                    margin-top:16px;
+                    margin-bottom:8px;
+                    font-size:15px;
+                    font-weight:700;
+                    color:#374151;
+                "
+            >
+                📋 進行中
+                <span
+                    style="
+                        margin-left:6px;
+                        color:#6b7280;
+                        font-size:13px;
+                        font-weight:500;
+                    "
+                >
+                    ${activeItems.length} 項
+                </span>
             </div>
+
+
+            <div class="list">
+                ${activeHTML}
+            </div>
+
+
+            ${completedHTML}
 
         </div>
 

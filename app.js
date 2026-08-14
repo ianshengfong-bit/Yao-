@@ -1365,6 +1365,150 @@ function renderListPage(
     title
 ) {
 
+    /*
+     * 所有一般工作型頁面統一分成兩區：
+     *
+     * 1. 進行中：done !== true
+     * 2. 已結束：done === true
+     *
+     * 這個函式同時服務：
+     * 進料／出貨、人員安排、查驗、工作紀錄
+     *
+     * 因此只要資料有 done 狀態，
+     * 所有頁面就會自動套用相同的
+     * 「完成 → 已結束、恢復 → 進行中」邏輯。
+     *
+     * 不修改 Firestore 資料結構，
+     * 只改變顯示方式。
+     */
+
+
+    const activeItems =
+        [...data]
+            .filter(
+                item =>
+                    item.done !== true
+            )
+            .sort(
+                (a, b) => {
+
+                    const aKey =
+                        `${a.date || ""} ${a.time || ""}`;
+
+                    const bKey =
+                        `${b.date || ""} ${b.time || ""}`;
+
+                    return aKey.localeCompare(
+                        bKey
+                    );
+
+                }
+            );
+
+
+    const completedItems =
+        [...data]
+            .filter(
+                item =>
+                    item.done === true
+            )
+            .sort(
+                (a, b) => {
+
+                    const aKey =
+                        `${a.date || ""} ${a.time || ""}`;
+
+                    const bKey =
+                        `${b.date || ""} ${b.time || ""}`;
+
+                    return bKey.localeCompare(
+                        aKey
+                    );
+
+                }
+            );
+
+
+    const activeHTML =
+        activeItems.length
+        ?
+        activeItems
+            .map(itemRow)
+            .join("")
+        :
+        `
+        <div class="empty">
+            目前沒有進行中的項目
+        </div>
+        `;
+
+
+    const completedHTML =
+        completedItems.length
+        ?
+        `
+        <details
+            style="
+                margin-top:16px;
+                border:1px solid #e5e7eb;
+                border-radius:14px;
+                background:#fafafa;
+                overflow:hidden;
+            "
+        >
+
+            <summary
+                style="
+                    cursor:pointer;
+                    padding:16px 18px;
+                    font-weight:700;
+                    color:#374151;
+                    list-style-position:inside;
+                    user-select:none;
+                "
+            >
+                ✅ 已結束
+
+                <span
+                    style="
+                        display:inline-flex;
+                        align-items:center;
+                        justify-content:center;
+                        min-width:28px;
+                        height:24px;
+                        padding:0 8px;
+                        margin-left:8px;
+                        border-radius:12px;
+                        background:#e5e7eb;
+                        font-size:13px;
+                        font-weight:600;
+                    "
+                >
+                    ${completedItems.length}
+                </span>
+            </summary>
+
+
+            <div
+                class="list"
+                style="
+                    padding:0 10px 10px;
+                    border-top:1px solid #e5e7eb;
+                "
+            >
+
+                ${completedItems
+                    .map(itemRow)
+                    .join("")}
+
+            </div>
+
+        </details>
+        `
+        :
+        "";
+
+
     app.innerHTML = `
 
         <div class="project-toolbar">
@@ -1374,6 +1518,14 @@ function renderListPage(
                 ${title}
 
                 共 ${data.length} 筆
+
+                ・
+
+                進行中 ${activeItems.length} 筆
+
+                ・
+
+                已結束 ${completedItems.length} 筆
 
             </div>
 
@@ -1390,30 +1542,39 @@ function renderListPage(
 
         <div class="card">
 
-            <div class="list">
+            <div
+                style="
+                    margin-bottom:8px;
+                    font-size:15px;
+                    font-weight:700;
+                    color:#374151;
+                "
+            >
 
-                ${
-                    data.length
-                    ?
-                    [...data]
-                        .sort(
-                            (a, b) =>
-                                (a.date || "")
-                                .localeCompare(
-                                    b.date || ""
-                                )
-                        )
-                        .map(itemRow)
-                        .join("")
-                    :
-                    `
-                    <div class="empty">
-                        尚無資料
-                    </div>
-                    `
-                }
+                📋 進行中
+
+                <span
+                    style="
+                        margin-left:6px;
+                        color:#6b7280;
+                        font-size:13px;
+                        font-weight:500;
+                    "
+                >
+                    ${activeItems.length} 項
+                </span>
 
             </div>
+
+
+            <div class="list">
+
+                ${activeHTML}
+
+            </div>
+
+
+            ${completedHTML}
 
         </div>
 

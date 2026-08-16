@@ -41,7 +41,9 @@ import {
     getAuth,
     onAuthStateChanged,
     signInWithEmailAndPassword,
-    signOut
+    signOut,
+    setPersistence,
+    browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 import {
@@ -155,19 +157,19 @@ const loginScreen =
 const system =
     document.querySelector("#system");
 
-const loginForm =
+let loginForm =
     document.querySelector("#loginForm");
 
-const loginEmail =
+let loginEmail =
     document.querySelector("#loginEmail");
 
-const loginPassword =
+let loginPassword =
     document.querySelector("#loginPassword");
 
-const loginError =
+let loginError =
     document.querySelector("#loginError");
 
-const loginBtn =
+let loginBtn =
     document.querySelector("#loginBtn");
 
 const logoutBtn =
@@ -345,8 +347,634 @@ function userCollection(name) {
 
 
 /* =========================================================
-登入
+登入 / 登入介面
 ========================================================= */
+
+const LOGIN_ACCOUNTS_STORAGE_KEY =
+    "YAO_LOGIN_ACCOUNTS_V1";
+
+
+function getSavedLoginAccounts() {
+
+    try {
+
+        const raw =
+            localStorage.getItem(
+                LOGIN_ACCOUNTS_STORAGE_KEY
+            );
+
+        if (!raw)
+            return [];
+
+        const parsed =
+            JSON.parse(raw);
+
+        if (!Array.isArray(parsed))
+            return [];
+
+        const result = [];
+        const seen = new Set();
+
+        parsed.forEach(
+            value => {
+
+                const email =
+                    String(value || "")
+                        .trim();
+
+                if (!email)
+                    return;
+
+                const key =
+                    email.toLowerCase();
+
+                if (seen.has(key))
+                    return;
+
+                seen.add(key);
+                result.push(email);
+
+            }
+        );
+
+        return result.slice(0, 8);
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "YAO：讀取已記住帳號失敗",
+            error
+        );
+
+        return [];
+
+    }
+
+}
+
+
+function saveLoginAccount(email) {
+
+    const value =
+        String(email || "")
+            .trim();
+
+    if (!value)
+        return;
+
+    const current =
+        getSavedLoginAccounts();
+
+    const filtered =
+        current.filter(
+            account =>
+                account.toLowerCase() !==
+                value.toLowerCase()
+        );
+
+    filtered.unshift(value);
+
+    try {
+
+        localStorage.setItem(
+            LOGIN_ACCOUNTS_STORAGE_KEY,
+            JSON.stringify(
+                filtered.slice(0, 8)
+            )
+        );
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "YAO：記住帳號失敗",
+            error
+        );
+
+    }
+
+}
+
+
+function injectLoginStyles() {
+
+    if (
+        document.querySelector(
+            "#yao-login-style"
+        )
+    ) {
+        return;
+    }
+
+    const style =
+        document.createElement("style");
+
+    style.id =
+        "yao-login-style";
+
+    style.textContent = `
+
+        #loginScreen {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 1000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 24px !important;
+            box-sizing: border-box !important;
+            background:
+                radial-gradient(
+                    circle at 50% 0%,
+                    rgba(59,130,246,.08),
+                    transparent 38%
+                ),
+                #f3f4f6 !important;
+        }
+
+        #loginScreen.hidden {
+            display: none !important;
+        }
+
+        #loginScreen .yao-login-shell {
+            width: min(440px, 100%);
+        }
+
+        #loginScreen .yao-login-brand {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        #loginScreen .yao-login-logo {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 14px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            color: #111827;
+            font-size: 30px;
+            font-weight: 900;
+            box-shadow:
+                0 14px 35px rgba(15,23,42,.10);
+            border: 1px solid #e5e7eb;
+        }
+
+        #loginScreen .yao-login-title {
+            margin: 0;
+            color: #111827;
+            font-size: 30px;
+            line-height: 1.15;
+            font-weight: 850;
+            letter-spacing: -.02em;
+        }
+
+        #loginScreen .yao-login-subtitle {
+            margin-top: 7px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        #loginScreen .yao-login-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow:
+                0 24px 70px rgba(15,23,42,.10);
+        }
+
+        #loginScreen .yao-login-field {
+            margin-bottom: 18px;
+        }
+
+        #loginScreen .yao-login-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 750;
+        }
+
+        #loginScreen .yao-login-input,
+        #loginScreen .yao-login-select {
+            width: 100%;
+            min-height: 50px;
+            box-sizing: border-box;
+            padding: 0 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 13px;
+            background: #ffffff;
+            color: #111827;
+            font-size: 16px;
+            outline: none;
+            transition:
+                border-color .15s ease,
+                box-shadow .15s ease;
+        }
+
+        #loginScreen .yao-login-input:focus,
+        #loginScreen .yao-login-select:focus {
+            border-color: #64748b;
+            box-shadow:
+                0 0 0 4px rgba(100,116,139,.12);
+        }
+
+        #loginScreen .yao-login-account-note {
+            margin-top: 8px;
+            color: #9ca3af;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        #loginScreen .yao-login-remember {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 2px 0 18px;
+            color: #4b5563;
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #loginScreen .yao-login-remember input {
+            width: 17px;
+            height: 17px;
+            margin: 0;
+            accent-color: #111827;
+        }
+
+        #loginScreen #loginBtn {
+            width: 100%;
+            min-height: 52px;
+            border: 0;
+            border-radius: 13px;
+            background: #111827;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            transition:
+                transform .15s ease,
+                opacity .15s ease;
+        }
+
+        #loginScreen #loginBtn:hover {
+            transform: translateY(-1px);
+            opacity: .94;
+        }
+
+        #loginScreen #loginBtn:disabled {
+            cursor: wait;
+            opacity: .65;
+            transform: none;
+        }
+
+        #loginScreen #loginError {
+            min-height: 22px;
+            margin-top: 12px;
+            color: #dc2626;
+            font-size: 13px;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        #loginScreen .yao-login-footer {
+            margin-top: 18px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        @media (max-width: 600px) {
+
+            #loginScreen {
+                align-items: center !important;
+                padding: 18px !important;
+                overflow-y: auto;
+            }
+
+            #loginScreen .yao-login-shell {
+                width: 100%;
+            }
+
+            #loginScreen .yao-login-brand {
+                margin-bottom: 16px;
+            }
+
+            #loginScreen .yao-login-logo {
+                width: 56px;
+                height: 56px;
+                border-radius: 16px;
+                font-size: 27px;
+            }
+
+            #loginScreen .yao-login-title {
+                font-size: 27px;
+            }
+
+            #loginScreen .yao-login-card {
+                padding: 22px 18px;
+                border-radius: 19px;
+            }
+
+            #loginScreen .yao-login-input,
+            #loginScreen .yao-login-select {
+                min-height: 52px;
+                font-size: 16px;
+            }
+
+            #loginScreen #loginBtn {
+                min-height: 54px;
+            }
+        }
+
+    `;
+
+    document.head.appendChild(style);
+
+}
+
+
+function buildLoginUI() {
+
+    if (!loginScreen)
+        return;
+
+    injectLoginStyles();
+
+    const existingEmail =
+        loginEmail
+            ? loginEmail.value.trim()
+            : "";
+
+    const savedAccounts =
+        getSavedLoginAccounts();
+
+    loginScreen.innerHTML = `
+
+        <div class="yao-login-shell">
+
+            <div class="yao-login-brand">
+
+                <div class="yao-login-logo">
+                    Y
+                </div>
+
+                <h1 class="yao-login-title">
+                    Yao
+                </h1>
+
+                <div class="yao-login-subtitle">
+                    消防工程行政管理
+                </div>
+
+            </div>
+
+
+            <div class="yao-login-card">
+
+                <form
+                    id="loginForm"
+                    autocomplete="on"
+                >
+
+                    <div
+                        class="yao-login-field"
+                        id="yaoSavedAccountField"
+                        style="${savedAccounts.length ? "" : "display:none;"}"
+                    >
+
+                        <label
+                            class="yao-login-label"
+                            for="yaoLoginAccountSelect"
+                        >
+                            帳號
+                        </label>
+
+                        <select
+                            id="yaoLoginAccountSelect"
+                            class="yao-login-select"
+                            autocomplete="username"
+                        >
+
+                            ${savedAccounts.map(
+                                email => `
+                                    <option
+                                        value="${esc(email)}"
+                                    >
+                                        ${esc(email)}
+                                    </option>
+                                `
+                            ).join("")}
+
+                            <option value="__other__">
+                                ＋ 使用其他帳號
+                            </option>
+
+                        </select>
+
+                        <div class="yao-login-account-note">
+                            這台裝置曾經記住的 Yao 帳號
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        class="yao-login-field"
+                        id="yaoEmailField"
+                        style="${savedAccounts.length ? "display:none;" : ""}"
+                    >
+
+                        <label
+                            class="yao-login-label"
+                            for="loginEmail"
+                        >
+                            Email
+                        </label>
+
+                        <input
+                            id="loginEmail"
+                            class="yao-login-input"
+                            type="email"
+                            autocomplete="username"
+                            placeholder="輸入 Email"
+                            value="${esc(
+                                existingEmail ||
+                                (savedAccounts[0] || "")
+                            )}"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="yao-login-field">
+
+                        <label
+                            class="yao-login-label"
+                            for="loginPassword"
+                        >
+                            密碼
+                        </label>
+
+                        <input
+                            id="loginPassword"
+                            class="yao-login-input"
+                            type="password"
+                            autocomplete="current-password"
+                            placeholder="輸入密碼"
+                            required
+                        >
+
+                    </div>
+
+
+                    <label class="yao-login-remember">
+
+                        <input
+                            id="yaoRememberAccount"
+                            type="checkbox"
+                            checked
+                        >
+
+                        <span>
+                            記住這個帳號
+                        </span>
+
+                    </label>
+
+
+                    <button
+                        id="loginBtn"
+                        type="submit"
+                    >
+                        登入系統
+                    </button>
+
+
+                    <div
+                        id="loginError"
+                        role="alert"
+                        aria-live="polite"
+                    ></div>
+
+                </form>
+
+            </div>
+
+
+            <div class="yao-login-footer">
+                Yao · Firebase
+            </div>
+
+        </div>
+
+    `;
+
+    loginForm =
+        document.querySelector(
+            "#loginForm"
+        );
+
+    loginEmail =
+        document.querySelector(
+            "#loginEmail"
+        );
+
+    loginPassword =
+        document.querySelector(
+            "#loginPassword"
+        );
+
+    loginError =
+        document.querySelector(
+            "#loginError"
+        );
+
+    loginBtn =
+        document.querySelector(
+            "#loginBtn"
+        );
+
+    const accountSelect =
+        document.querySelector(
+            "#yaoLoginAccountSelect"
+        );
+
+    const savedAccountField =
+        document.querySelector(
+            "#yaoSavedAccountField"
+        );
+
+    const emailField =
+        document.querySelector(
+            "#yaoEmailField"
+        );
+
+    if (accountSelect) {
+
+        accountSelect.addEventListener(
+            "change",
+            function () {
+
+                if (
+                    accountSelect.value ===
+                    "__other__"
+                ) {
+
+                    if (savedAccountField) {
+                        savedAccountField.style.display =
+                            "none";
+                    }
+
+                    if (emailField) {
+                        emailField.style.display =
+                            "";
+                    }
+
+                    loginEmail.value = "";
+                    loginEmail.focus();
+
+                    return;
+
+                }
+
+                loginEmail.value =
+                    accountSelect.value;
+
+                if (savedAccountField) {
+                    savedAccountField.style.display =
+                        "";
+                }
+
+                if (emailField) {
+                    emailField.style.display =
+                        "none";
+                }
+
+            }
+        );
+
+        if (savedAccounts.length) {
+            loginEmail.value =
+                savedAccounts[0];
+        }
+
+    }
+
+}
+
+
+buildLoginUI();
+
 
 if (loginForm) {
 
@@ -360,6 +988,29 @@ if (loginForm) {
                 loginError.textContent = "";
             }
 
+            const email =
+                loginEmail.value.trim();
+
+            const rememberCheckbox =
+                document.querySelector(
+                    "#yaoRememberAccount"
+                );
+
+            const shouldRemember =
+                !rememberCheckbox ||
+                rememberCheckbox.checked;
+
+            if (!email) {
+
+                if (loginError) {
+                    loginError.textContent =
+                        "請輸入 Email。";
+                }
+
+                return;
+
+            }
+
             if (loginBtn) {
                 loginBtn.disabled = true;
                 loginBtn.textContent = "登入中…";
@@ -367,11 +1018,24 @@ if (loginForm) {
 
             try {
 
+                /*
+                 * 明確指定 Firebase 使用瀏覽器本機持續登入。
+                 * 使用者主動「登出」後才會回到登入畫面。
+                 */
+                await setPersistence(
+                    auth,
+                    browserLocalPersistence
+                );
+
                 await signInWithEmailAndPassword(
                     auth,
-                    loginEmail.value.trim(),
+                    email,
                     loginPassword.value
                 );
+
+                if (shouldRemember) {
+                    saveLoginAccount(email);
+                }
 
                 loginPassword.value = "";
 
@@ -487,6 +1151,23 @@ if (logoutBtn) {
     );
 
 }
+
+
+/* =========================================================
+Firebase 登入持續保存
+========================================================= */
+
+setPersistence(
+    auth,
+    browserLocalPersistence
+).catch(
+    error => {
+        console.warn(
+            "YAO：無法啟用本機登入持續保存",
+            error
+        );
+    }
+);
 
 
 /* =========================================================
@@ -1365,150 +2046,6 @@ function renderListPage(
     title
 ) {
 
-    /*
-     * 所有一般工作型頁面統一分成兩區：
-     *
-     * 1. 進行中：done !== true
-     * 2. 已結束：done === true
-     *
-     * 這個函式同時服務：
-     * 進料／出貨、人員安排、查驗、工作紀錄
-     *
-     * 因此只要資料有 done 狀態，
-     * 所有頁面就會自動套用相同的
-     * 「完成 → 已結束、恢復 → 進行中」邏輯。
-     *
-     * 不修改 Firestore 資料結構，
-     * 只改變顯示方式。
-     */
-
-
-    const activeItems =
-        [...data]
-            .filter(
-                item =>
-                    item.done !== true
-            )
-            .sort(
-                (a, b) => {
-
-                    const aKey =
-                        `${a.date || ""} ${a.time || ""}`;
-
-                    const bKey =
-                        `${b.date || ""} ${b.time || ""}`;
-
-                    return aKey.localeCompare(
-                        bKey
-                    );
-
-                }
-            );
-
-
-    const completedItems =
-        [...data]
-            .filter(
-                item =>
-                    item.done === true
-            )
-            .sort(
-                (a, b) => {
-
-                    const aKey =
-                        `${a.date || ""} ${a.time || ""}`;
-
-                    const bKey =
-                        `${b.date || ""} ${b.time || ""}`;
-
-                    return bKey.localeCompare(
-                        aKey
-                    );
-
-                }
-            );
-
-
-    const activeHTML =
-        activeItems.length
-        ?
-        activeItems
-            .map(itemRow)
-            .join("")
-        :
-        `
-        <div class="empty">
-            目前沒有進行中的項目
-        </div>
-        `;
-
-
-    const completedHTML =
-        completedItems.length
-        ?
-        `
-        <details
-            style="
-                margin-top:16px;
-                border:1px solid #e5e7eb;
-                border-radius:14px;
-                background:#fafafa;
-                overflow:hidden;
-            "
-        >
-
-            <summary
-                style="
-                    cursor:pointer;
-                    padding:16px 18px;
-                    font-weight:700;
-                    color:#374151;
-                    list-style-position:inside;
-                    user-select:none;
-                "
-            >
-                ✅ 已結束
-
-                <span
-                    style="
-                        display:inline-flex;
-                        align-items:center;
-                        justify-content:center;
-                        min-width:28px;
-                        height:24px;
-                        padding:0 8px;
-                        margin-left:8px;
-                        border-radius:12px;
-                        background:#e5e7eb;
-                        font-size:13px;
-                        font-weight:600;
-                    "
-                >
-                    ${completedItems.length}
-                </span>
-            </summary>
-
-
-            <div
-                class="list"
-                style="
-                    padding:0 10px 10px;
-                    border-top:1px solid #e5e7eb;
-                "
-            >
-
-                ${completedItems
-                    .map(itemRow)
-                    .join("")}
-
-            </div>
-
-        </details>
-        `
-        :
-        "";
-
-
     app.innerHTML = `
 
         <div class="project-toolbar">
@@ -1518,14 +2055,6 @@ function renderListPage(
                 ${title}
 
                 共 ${data.length} 筆
-
-                ・
-
-                進行中 ${activeItems.length} 筆
-
-                ・
-
-                已結束 ${completedItems.length} 筆
 
             </div>
 
@@ -1542,39 +2071,30 @@ function renderListPage(
 
         <div class="card">
 
-            <div
-                style="
-                    margin-bottom:8px;
-                    font-size:15px;
-                    font-weight:700;
-                    color:#374151;
-                "
-            >
-
-                📋 進行中
-
-                <span
-                    style="
-                        margin-left:6px;
-                        color:#6b7280;
-                        font-size:13px;
-                        font-weight:500;
-                    "
-                >
-                    ${activeItems.length} 項
-                </span>
-
-            </div>
-
-
             <div class="list">
 
-                ${activeHTML}
+                ${
+                    data.length
+                    ?
+                    [...data]
+                        .sort(
+                            (a, b) =>
+                                (a.date || "")
+                                .localeCompare(
+                                    b.date || ""
+                                )
+                        )
+                        .map(itemRow)
+                        .join("")
+                    :
+                    `
+                    <div class="empty">
+                        尚無資料
+                    </div>
+                    `
+                }
 
             </div>
-
-
-            ${completedHTML}
 
         </div>
 

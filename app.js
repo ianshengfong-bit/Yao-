@@ -2046,15 +2046,139 @@ function renderListPage(
     title
 ) {
 
+    /*
+     * 一般列表也統一採用「進行中 / 已結束」分類。
+     * 不修改資料結構，直接使用現有的 item.done。
+     * 這樣進料／出貨、人員安排、查驗、工作紀錄
+     * 都會和案場內的工作分類保持一致。
+     */
+
+    const activeItems =
+        [...data]
+            .filter(
+                item =>
+                    item.done !== true
+            )
+            .sort(
+                (a, b) =>
+                    `${a.date || ""} ${a.time || ""}`
+                    .localeCompare(
+                        `${b.date || ""} ${b.time || ""}`
+                    )
+            );
+
+
+    const completedItems =
+        [...data]
+            .filter(
+                item =>
+                    item.done === true
+            )
+            .sort(
+                (a, b) =>
+                    `${b.date || ""} ${b.time || ""}`
+                    .localeCompare(
+                        `${a.date || ""} ${a.time || ""}`
+                    )
+            );
+
+
+    const activeHTML =
+        activeItems.length
+        ?
+        activeItems
+            .map(itemRow)
+            .join("")
+        :
+        `
+        <div class="empty">
+            目前沒有進行中的資料
+        </div>
+        `;
+
+
+    const completedHTML =
+        completedItems.length
+        ?
+        `
+        <details
+            style="
+                margin-top:16px;
+                border:1px solid #e5e7eb;
+                border-radius:14px;
+                background:#fafafa;
+                overflow:hidden;
+            "
+        >
+
+            <summary
+                style="
+                    cursor:pointer;
+                    padding:16px 18px;
+                    font-weight:700;
+                    color:#374151;
+                    list-style-position:inside;
+                    user-select:none;
+                "
+            >
+                ✅ 已結束
+                <span
+                    style="
+                        display:inline-flex;
+                        align-items:center;
+                        justify-content:center;
+                        min-width:28px;
+                        height:24px;
+                        padding:0 8px;
+                        margin-left:8px;
+                        border-radius:12px;
+                        background:#e5e7eb;
+                        font-size:13px;
+                        font-weight:600;
+                    "
+                >
+                    ${completedItems.length}
+                </span>
+            </summary>
+
+            <div
+                class="list"
+                style="
+                    padding:0 10px 10px;
+                    border-top:1px solid #e5e7eb;
+                "
+            >
+                ${completedItems.map(itemRow).join("")}
+            </div>
+
+        </details>
+        `
+        :
+        "";
+
+
     app.innerHTML = `
 
         <div class="project-toolbar">
 
-            <div class="muted">
+            <div>
 
-                ${title}
+                <div class="muted">
 
-                共 ${data.length} 筆
+                    ${title}
+
+                    共 ${data.length} 筆
+
+                </div>
+
+                <div
+                    class="muted"
+                    style="margin-top:4px;"
+                >
+                    進行中 ${activeItems.length} 筆
+                    ｜
+                    已結束 ${completedItems.length} 筆
+                </div>
 
             </div>
 
@@ -2073,28 +2197,11 @@ function renderListPage(
 
             <div class="list">
 
-                ${
-                    data.length
-                    ?
-                    [...data]
-                        .sort(
-                            (a, b) =>
-                                (a.date || "")
-                                .localeCompare(
-                                    b.date || ""
-                                )
-                        )
-                        .map(itemRow)
-                        .join("")
-                    :
-                    `
-                    <div class="empty">
-                        尚無資料
-                    </div>
-                    `
-                }
+                ${activeHTML}
 
             </div>
+
+            ${completedHTML}
 
         </div>
 

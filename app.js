@@ -2157,7 +2157,39 @@ function renderDashboard(data) {
 
 
         <div
-            class="grid two-col"
+            class="dashboard-inbox-card ${inboxNotes.length ? "has-notes" : ""}"
+            onclick="goToPage('inbox')"
+            role="button"
+            tabindex="0"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToPage('inbox')}"
+        >
+            <div class="dashboard-inbox-icon">📥</div>
+
+            <div class="dashboard-inbox-body">
+                <div class="dashboard-inbox-title">
+                    待整理
+                    <span class="dashboard-inbox-count">
+                        ${inboxNotes.length}
+                    </span>
+                </div>
+
+                <div class="dashboard-inbox-preview">
+                    ${
+                        inboxNotes.length
+                        ? esc((inboxNotes[0]?.text || "").replace(/\s+/g, " ").slice(0, 70))
+                        : "臨時想到的事情，可以先快速記在這裡。"
+                    }
+                </div>
+            </div>
+
+            <div class="dashboard-inbox-arrow">
+                查看 →
+            </div>
+        </div>
+
+
+        <div
+            class="grid two-col dashboard-work-grid"
             style="margin-top:16px"
         >
 
@@ -2237,47 +2269,47 @@ function itemRow(item) {
         return "";
 
 
+    const metaLine =
+        `${project.code} ｜ ${project.name} ・ ${formatDate(item.date)} ${item.time || ""}`;
+
+    const noteText =
+        String(item.note || "").trim();
+
+
     return `
 
-        <div class="list-row">
+        <div class="list-row compact-item-row">
 
-            <div class="list-main">
+            <div class="list-main compact-item-main">
 
                 <strong>
                     ${esc(item.title)}
                 </strong>
 
-                <span>
-
-                    ${esc(project.code)}
-
-                    ｜
-
-                    ${esc(project.name)}
-
-                    ・
-
-                    ${formatDate(item.date)}
-
-                    ${esc(item.time || "")}
-
-                    ・
-
-                    ${esc(item.note || "")}
-
+                <span class="compact-item-meta">
+                    ${esc(metaLine)}
                 </span>
+
+                ${
+                    noteText
+                    ? `
+                        <span class="compact-item-note">
+                            ${esc(noteText)}
+                        </span>
+                    `
+                    : ""
+                }
 
             </div>
 
 
-            <div class="row-actions">
+            <div class="row-actions desktop-item-actions">
 
                 <span
                     class="tag ${typeClass(item.type)}"
                 >
                     ${esc(item.type)}
                 </span>
-
 
                 <button
                     class="mini-btn"
@@ -2286,14 +2318,12 @@ function itemRow(item) {
                     ✏️ 編輯
                 </button>
 
-
                 <button
                     class="mini-btn"
                     onclick="shareItem('${item.id}')"
                 >
                     📤 分享
                 </button>
-
 
                 <button
                     class="mini-btn"
@@ -2308,13 +2338,69 @@ function itemRow(item) {
                     }
                 </button>
 
-
                 <button
                     class="mini-btn delete"
                     onclick="deleteItem('${item.id}')"
                 >
                     🗑️
                 </button>
+
+            </div>
+
+
+            <div class="mobile-item-actions">
+
+                <span
+                    class="tag ${typeClass(item.type)}"
+                >
+                    ${esc(item.type)}
+                </span>
+
+                <button
+                    class="mini-btn mobile-done-btn"
+                    onclick="toggleDone('${item.id}')"
+                >
+                    ${
+                        item.done
+                        ?
+                        "恢復"
+                        :
+                        "完成"
+                    }
+                </button>
+
+                <details class="item-more-menu">
+                    <summary
+                        class="mini-btn item-more-btn"
+                        aria-label="更多操作"
+                    >
+                        •••
+                    </summary>
+
+                    <div class="item-more-popover">
+                        <button
+                            type="button"
+                            onclick="editItem('${item.id}'); this.closest('details').removeAttribute('open')"
+                        >
+                            ✏️ 編輯
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="shareItem('${item.id}'); this.closest('details').removeAttribute('open')"
+                        >
+                            📤 分享
+                        </button>
+
+                        <button
+                            type="button"
+                            class="danger"
+                            onclick="deleteItem('${item.id}'); this.closest('details').removeAttribute('open')"
+                        >
+                            🗑️ 刪除
+                        </button>
+                    </div>
+                </details>
 
             </div>
 
@@ -7267,6 +7353,24 @@ const quickAddBtn =
 if (quickAddBtn) {
 
     quickAddBtn.onclick =
+        function () {
+
+            openInboxModal();
+
+        };
+
+}
+
+
+const mobileQuickNoteBtn =
+    document.querySelector(
+        "#mobileQuickNoteBtn"
+    );
+
+
+if (mobileQuickNoteBtn) {
+
+    mobileQuickNoteBtn.onclick =
         function () {
 
             openInboxModal();

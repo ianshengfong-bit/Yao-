@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-v8-inbox";
+const CACHE_NAME = "yao-v9-mobile";
 
 const FILES_TO_CACHE = [
     "./",

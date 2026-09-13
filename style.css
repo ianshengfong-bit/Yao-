@@ -2182,3 +2182,430 @@ textarea:focus-visible {
         justify-content: flex-start;
     }
 }
+
+
+/* =========================================================
+   YAO V5.3｜行動版快速記錄 + 視覺優化
+   深墨藍 + 暖消防橘
+========================================================= */
+
+:root {
+    --yao-ink: #172033;
+    --yao-sidebar: #111827;
+    --yao-accent: #e87524;
+    --yao-accent-dark: #c85f16;
+    --yao-accent-soft: #fff3e8;
+    --yao-bg: #f6f7f9;
+    --yao-border: #e3e7ed;
+    --yao-muted: #778195;
+}
+
+body {
+    background: var(--yao-bg);
+}
+
+.sidebar {
+    background: var(--yao-sidebar);
+}
+
+.nav-item.active {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(232,117,36,.18),
+            rgba(255,255,255,.07)
+        );
+    box-shadow:
+        inset 3px 0 0 var(--yao-accent);
+}
+
+.btn.primary {
+    background: var(--yao-ink);
+    border-color: var(--yao-ink);
+}
+
+.btn.primary:hover {
+    background: #202b40;
+    border-color: #202b40;
+}
+
+.quick-add {
+    background: #ffffff;
+    color: var(--yao-ink);
+    border: 1px solid rgba(255,255,255,.12);
+}
+
+.tag.orange {
+    background: var(--yao-accent-soft);
+    color: #a4470d;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+    outline-color: var(--yao-accent);
+}
+
+/* ---------- Dashboard：待整理捷徑 ---------- */
+
+.dashboard-inbox-card {
+    margin-top: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    background: #ffffff;
+    border: 1px solid var(--yao-border);
+    border-radius: 13px;
+    cursor: pointer;
+    transition:
+        border-color .15s ease,
+        box-shadow .15s ease,
+        transform .1s ease;
+}
+
+.dashboard-inbox-card:hover {
+    border-color: #f1c49f;
+    box-shadow: 0 5px 16px rgba(23,32,51,.05);
+}
+
+.dashboard-inbox-card:active {
+    transform: scale(.995);
+}
+
+.dashboard-inbox-card.has-notes {
+    border-color: #f0c29a;
+    background:
+        linear-gradient(
+            90deg,
+            #fffaf6 0%,
+            #ffffff 60%
+        );
+}
+
+.dashboard-inbox-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--yao-accent-soft);
+    font-size: 20px;
+}
+
+.dashboard-inbox-body {
+    min-width: 0;
+    flex: 1;
+}
+
+.dashboard-inbox-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--yao-ink);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.dashboard-inbox-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--yao-accent);
+    color: #ffffff;
+    font-size: 11px;
+}
+
+.dashboard-inbox-preview {
+    margin-top: 4px;
+    color: var(--yao-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-inbox-arrow {
+    color: #a7551f;
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+/* ---------- 工作小卡：資訊層級 ---------- */
+
+.compact-item-main .compact-item-meta {
+    color: var(--yao-muted);
+}
+
+.compact-item-note {
+    display: -webkit-box !important;
+    margin-top: 5px !important;
+    color: #5f6878 !important;
+    line-height: 1.45;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mobile-item-actions {
+    display: none;
+}
+
+/* ---------- 手機固定「記一下」 ---------- */
+
+.mobile-quick-note {
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+
+    .inbox-nav-item {
+        order: -1;
+    }
+
+    .nav-count {
+        min-width: 19px;
+        height: 19px;
+        padding: 0 5px;
+        font-size: 10px;
+    }
+
+    .mobile-quick-note {
+        position: fixed;
+        right: max(14px, env(safe-area-inset-right));
+        bottom:
+            max(
+                18px,
+                calc(12px + env(safe-area-inset-bottom))
+            );
+        z-index: 850;
+        min-height: 50px;
+        padding: 0 17px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--yao-accent);
+        color: #ffffff;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 850;
+        cursor: pointer;
+        box-shadow:
+            0 12px 28px rgba(200,95,22,.28);
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-quick-note:active {
+        transform: scale(.97);
+        background: var(--yao-accent-dark);
+    }
+
+    .mobile-quick-note-plus {
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .toast {
+        bottom:
+            max(
+                82px,
+                calc(76px + env(safe-area-inset-bottom))
+            );
+    }
+
+    .stats {
+        gap: 8px;
+    }
+
+    .stat {
+        padding: 12px 13px;
+        border-radius: 12px;
+    }
+
+    .stat-value {
+        margin-top: 4px;
+        font-size: 22px;
+    }
+
+    .dashboard-inbox-card {
+        margin-top: 10px;
+        padding: 13px;
+        border-radius: 12px;
+    }
+
+    .dashboard-inbox-arrow {
+        font-size: 11px;
+    }
+
+    .dashboard-work-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+
+    .compact-item-row {
+        position: relative;
+        padding: 13px;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .compact-item-main {
+        padding-right: 0;
+    }
+
+    .compact-item-main strong {
+        padding-right: 0;
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    .compact-item-meta {
+        line-height: 1.45;
+    }
+
+    .compact-item-note {
+        -webkit-line-clamp: 2;
+        font-size: 12px !important;
+    }
+
+    .desktop-item-actions {
+        display: none;
+    }
+
+    .mobile-item-actions {
+        width: 100%;
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        justify-content: flex-end;
+    }
+
+    .mobile-item-actions .tag {
+        margin-right: auto;
+    }
+
+    .mobile-done-btn {
+        min-height: 36px;
+        padding: 6px 10px;
+    }
+
+    .item-more-menu {
+        position: relative;
+    }
+
+    .item-more-menu > summary {
+        list-style: none;
+    }
+
+    .item-more-menu > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .item-more-btn {
+        min-width: 42px;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 1px;
+    }
+
+    .item-more-popover {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 7px);
+        z-index: 30;
+        width: 145px;
+        padding: 6px;
+        background: #ffffff;
+        border: 1px solid var(--yao-border);
+        border-radius: 11px;
+        box-shadow: 0 12px 30px rgba(15,23,42,.14);
+    }
+
+    .item-more-popover button {
+        width: 100%;
+        min-height: 39px;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--yao-ink);
+        text-align: left;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .item-more-popover button:active {
+        background: #f6f7f9;
+    }
+
+    .item-more-popover button.danger {
+        color: #b91c1c;
+    }
+
+    #inboxModal {
+        align-items: flex-end;
+    }
+
+    #inboxModal .inbox-quick-modal {
+        width: 100%;
+        max-width: none;
+        max-height: min(78vh, 620px);
+        margin: 0;
+        border-radius: 20px 20px 0 0;
+        padding-bottom:
+            max(
+                20px,
+                calc(14px + env(safe-area-inset-bottom))
+            );
+    }
+
+    #inboxText {
+        min-height: 120px;
+    }
+
+    .inbox-toolbar {
+        gap: 10px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+
+    .mobile-quick-note {
+        right: 12px;
+        min-height: 48px;
+        padding: 0 15px;
+    }
+
+    .dashboard-inbox-icon {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+        font-size: 18px;
+    }
+
+    .dashboard-inbox-preview {
+        max-width: 58vw;
+    }
+
+    .dashboard-inbox-arrow {
+        display: none;
+    }
+
+    .compact-item-row {
+        padding: 12px;
+    }
+}

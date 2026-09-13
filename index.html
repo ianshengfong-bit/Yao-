@@ -218,6 +218,15 @@
             </button>
 
 
+            <button
+                class="nav-item inbox-nav-item"
+                data-page="inbox"
+            >
+                📥 待整理
+                <span id="inboxNavCount" class="nav-count hidden">0</span>
+            </button>
+
+
             <!-- =============================
                  提醒中心
             ============================== -->
@@ -336,6 +345,53 @@
 
 </div>
 
+
+
+<!-- =====================================================
+     快速筆記 / 待整理 Modal
+===================================================== -->
+
+<div
+    class="modal-backdrop hidden"
+    id="inboxModal"
+>
+
+    <div class="modal inbox-quick-modal">
+
+        <div class="modal-head">
+            <h2>快速記一下</h2>
+            <button
+                type="button"
+                class="icon-btn"
+                id="closeInboxModal"
+                aria-label="關閉"
+            >×</button>
+        </div>
+
+        <form id="inboxForm">
+            <label>
+                臨時紀錄
+                <textarea
+                    id="inboxText"
+                    rows="5"
+                    required
+                    placeholder="想到什麼先記下來，晚點再整理…"
+                ></textarea>
+            </label>
+
+            <div class="form-hint">
+                不用先選案場、日期或類型。之後到「待整理」再轉成正式工作。
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn" id="cancelInboxModal">取消</button>
+                <button type="submit" class="btn primary">先記下來</button>
+            </div>
+        </form>
+
+    </div>
+
+</div>
 
 
 <!-- =====================================================

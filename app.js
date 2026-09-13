@@ -101,6 +101,12 @@ let unsubscribeProjects = null;
 
 let unsubscribeItems = null;
 
+let unsubscribeInboxNotes = null;
+
+let inboxNotes = [];
+
+let pendingInboxNoteId = null;
+
 let dataReady = false;
 
 let projectsReady = false;
@@ -1276,6 +1282,8 @@ async function startRealtimeData() {
 
     projects = [];
 
+    inboxNotes = [];
+
 
     if (unsubscribeProjects) {
 
@@ -1291,6 +1299,15 @@ async function startRealtimeData() {
         unsubscribeItems();
 
         unsubscribeItems = null;
+
+    }
+
+
+    if (unsubscribeInboxNotes) {
+
+        unsubscribeInboxNotes();
+
+        unsubscribeInboxNotes = null;
 
     }
 
@@ -1382,6 +1399,37 @@ async function startRealtimeData() {
             }
         );
 
+
+    unsubscribeInboxNotes =
+        onSnapshot(
+            userCollection("inboxNotes"),
+
+            snapshot => {
+
+                inboxNotes =
+                    snapshot.docs
+                        .map(docItem => ({
+                            id: docItem.id,
+                            ...docItem.data()
+                        }))
+                        .sort((a, b) =>
+                            Number(b.createdAt || 0) - Number(a.createdAt || 0)
+                        );
+
+                updateInboxNavCount();
+
+                if (currentPage === "inbox" && dataReady) {
+                    render();
+                }
+
+            },
+
+            error => {
+                console.error("待整理同步失敗:", error);
+                toast("待整理資料讀取失敗");
+            }
+        );
+
 }
 
 
@@ -1435,9 +1483,24 @@ function stopRealtimeData() {
     }
 
 
+    if (unsubscribeInboxNotes) {
+
+        unsubscribeInboxNotes();
+
+        unsubscribeInboxNotes = null;
+
+    }
+
+
     items = [];
 
     projects = [];
+
+    inboxNotes = [];
+
+    pendingInboxNoteId = null;
+
+    updateInboxNavCount();
 
     dataReady = false;
 
@@ -1601,6 +1664,9 @@ function render() {
         records:
             "工作紀錄",
 
+        inbox:
+            "待整理",
+
         reminders:
             "提醒中心"
 
@@ -1723,6 +1789,14 @@ function render() {
 
     if (
         currentPage ===
+        "inbox"
+    ) {
+        renderInbox();
+    }
+
+
+    if (
+        currentPage ===
         "reminders"
     ) {
         renderReminders();
@@ -1744,6 +1818,220 @@ function goToPage(page) {
         page;
 
     render();
+
+}
+
+
+/* =========================================================
+待整理 / 快速筆記
+========================================================= */
+
+function updateInboxNavCount() {
+
+    const badge =
+        document.querySelector("#inboxNavCount");
+
+    if (!badge)
+        return;
+
+    const count = inboxNotes.length;
+
+    badge.textContent = String(count);
+    badge.classList.toggle("hidden", count === 0);
+
+}
+
+
+function formatInboxCreatedAt(value) {
+
+    const date = new Date(Number(value || 0));
+
+    if (Number.isNaN(date.getTime()))
+        return "";
+
+    return date.toLocaleString("zh-TW", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    });
+
+}
+
+
+function renderInbox() {
+
+    if (!app)
+        return;
+
+    app.innerHTML = `
+        <div class="inbox-toolbar">
+            <div>
+                <h2>📥 待整理</h2>
+                <div class="muted">
+                    臨時想到的事情先放這裡，有空再整理成正式工作。
+                </div>
+            </div>
+
+            <button class="btn primary" onclick="openInboxModal()">
+                ＋ 快速記一下
+            </button>
+        </div>
+
+        ${
+            inboxNotes.length === 0
+            ? `
+                <div class="card inbox-empty">
+                    <div class="inbox-empty-icon">✓</div>
+                    <h3>目前沒有待整理事項</h3>
+                    <div class="muted">臨時想到事情時，按「快速記一下」即可。</div>
+                </div>
+            `
+            : `
+                <div class="inbox-list">
+                    ${inboxNotes.map(note => `
+                        <div class="card inbox-note-card">
+                            <div class="inbox-note-main">
+                                <div class="inbox-note-time">
+                                    ${esc(formatInboxCreatedAt(note.createdAt))}
+                                </div>
+                                <div class="inbox-note-text">
+                                    ${esc(note.text || "")}
+                                </div>
+                            </div>
+
+                            <div class="row-actions">
+                                <button
+                                    class="mini-btn"
+                                    onclick="organizeInboxNote('${esc(note.id)}')"
+                                >
+                                    整理
+                                </button>
+                                <button
+                                    class="mini-btn delete"
+                                    onclick="deleteInboxNote('${esc(note.id)}')"
+                                >
+                                    刪除
+                                </button>
+                            </div>
+                        </div>
+                    `).join("")}
+                </div>
+            `
+        }
+    `;
+
+}
+
+
+function openInboxModal() {
+
+    const modal =
+        document.querySelector("#inboxModal");
+
+    const form =
+        document.querySelector("#inboxForm");
+
+    if (!modal)
+        return;
+
+    if (form)
+        form.reset();
+
+    modal.classList.remove("hidden");
+
+    setTimeout(() => {
+        document.querySelector("#inboxText")?.focus();
+    }, 0);
+
+}
+
+
+function closeInboxModal() {
+
+    document
+        .querySelector("#inboxModal")
+        ?.classList.add("hidden");
+
+}
+
+
+async function deleteInboxNote(id) {
+
+    if (!id || !currentUser)
+        return;
+
+    if (!confirm("確定刪除這筆待整理紀錄嗎？"))
+        return;
+
+    try {
+
+        await deleteDoc(
+            doc(
+                db,
+                "users",
+                currentUser.uid,
+                "inboxNotes",
+                String(id)
+            )
+        );
+
+        toast("待整理紀錄已刪除");
+
+    }
+    catch (error) {
+
+        console.error("待整理刪除失敗:", error);
+        toast("待整理紀錄刪除失敗");
+
+    }
+
+}
+
+
+function organizeInboxNote(id) {
+
+    const note =
+        inboxNotes.find(row => String(row.id) === String(id));
+
+    if (!note)
+        return;
+
+    pendingInboxNoteId = String(note.id);
+
+    openItemModal(null, null, note.text || "");
+
+}
+
+
+async function removePendingInboxNoteAfterSave() {
+
+    if (!pendingInboxNoteId || !currentUser)
+        return;
+
+    const id = pendingInboxNoteId;
+    pendingInboxNoteId = null;
+
+    try {
+
+        await deleteDoc(
+            doc(
+                db,
+                "users",
+                currentUser.uid,
+                "inboxNotes",
+                id
+            )
+        );
+
+    }
+    catch (error) {
+
+        console.warn("正式工作已新增，但待整理原稿刪除失敗:", error);
+        toast("工作已新增；待整理原稿請稍後手動刪除");
+
+    }
 
 }
 
@@ -2903,7 +3191,8 @@ function editProject(id) {
 
 function openItemModal(
     id = null,
-    defaultProjectId = null
+    defaultProjectId = null,
+    defaultTitle = ""
 ) {
 
     editingItemId =
@@ -3066,6 +3355,16 @@ function openItemModal(
             isoToday;
 
 
+        const titleInput =
+            document.querySelector(
+                "#itemTitle"
+            );
+
+        if (titleInput && defaultTitle) {
+            titleInput.value = defaultTitle;
+        }
+
+
         const oneHour =
             document.querySelector(
                 "#itemOneHourReminder"
@@ -3216,6 +3515,8 @@ function closeItemModal() {
 
     editingItemId =
         null;
+
+    pendingInboxNoteId = null;
 
 }
 
@@ -6650,6 +6951,11 @@ if (itemForm) {
                     );
 
 
+                    if (pendingInboxNoteId) {
+                        await removePendingInboxNoteAfterSave();
+                    }
+
+
                     toast(
                         "資料已新增"
                     );
@@ -6963,7 +7269,7 @@ if (quickAddBtn) {
     quickAddBtn.onclick =
         function () {
 
-            openItemModal();
+            openInboxModal();
 
         };
 
@@ -6986,6 +7292,67 @@ if (headerAddBtn) {
         };
 
 }
+
+
+/* =========================================================
+快速筆記事件
+========================================================= */
+
+const inboxForm =
+    document.querySelector("#inboxForm");
+
+if (inboxForm) {
+
+    inboxForm.addEventListener(
+        "submit",
+        async function (event) {
+
+            event.preventDefault();
+
+            const text =
+                document.querySelector("#inboxText")
+                    ?.value
+                    .trim();
+
+            if (!text) {
+                alert("請輸入要暫存的內容。");
+                return;
+            }
+
+            try {
+
+                await addDoc(
+                    userCollection("inboxNotes"),
+                    {
+                        text,
+                        createdAt: Date.now()
+                    }
+                );
+
+                closeInboxModal();
+                toast("已放到待整理");
+
+            }
+            catch (error) {
+
+                console.error("待整理儲存失敗:", error);
+                toast("待整理儲存失敗");
+
+            }
+
+        }
+    );
+
+}
+
+
+document
+    .querySelector("#closeInboxModal")
+    ?.addEventListener("click", closeInboxModal);
+
+document
+    .querySelector("#cancelInboxModal")
+    ?.addEventListener("click", closeInboxModal);
 
 
 /* =========================================================
@@ -7152,6 +7519,15 @@ window.shareItem =
 
 window.openItemModal =
     openItemModal;
+
+window.openInboxModal =
+    openInboxModal;
+
+window.organizeInboxNote =
+    organizeInboxNote;
+
+window.deleteInboxNote =
+    deleteInboxNote;
 
 window.renderProjects =
     renderProjects;

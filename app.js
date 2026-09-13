@@ -1422,7 +1422,14 @@ async function startRealtimeData() {
                     render();
                 }
 
-            },
+        // V5.3.2：待整理資料一有變化，立即刷新目前畫面
+        // Dashboard／待整理頁直接更新，不必切換分頁
+        if (currentPage === "dashboard" || currentPage === "inbox") {
+            render();
+        } else {
+            updateInboxNavCount?.();
+        }
+},
 
             error => {
                 console.error("待整理同步失敗:", error);
@@ -1603,6 +1610,9 @@ function filteredItems() {
 ========================================================= */
 
 function render() {
+
+    updateInboxNavCount();
+
 
     if (!currentUser)
         return;

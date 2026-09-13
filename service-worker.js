@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-v10-mobile-fix";
+const CACHE_NAME = "yao-v11-realtime-fix";
 
 const FILES_TO_CACHE = [
     "./",

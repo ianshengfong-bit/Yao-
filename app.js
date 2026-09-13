@@ -1925,6 +1925,24 @@ function renderInbox() {
 }
 
 
+function setMobileQuickNoteVisibility(hidden) {
+
+    const button =
+        document.querySelector(
+            "#mobileQuickNoteBtn"
+        );
+
+    if (!button)
+        return;
+
+    button.classList.toggle(
+        "is-hidden",
+        Boolean(hidden)
+    );
+
+}
+
+
 function openInboxModal() {
 
     const modal =
@@ -1939,11 +1957,26 @@ function openInboxModal() {
     if (form)
         form.reset();
 
+    setMobileQuickNoteVisibility(true);
+
     modal.classList.remove("hidden");
 
+    document.body.classList.add(
+        "inbox-modal-open"
+    );
+
     setTimeout(() => {
-        document.querySelector("#inboxText")?.focus();
-    }, 0);
+
+        const field =
+            document.querySelector(
+                "#inboxText"
+            );
+
+        field?.focus({
+            preventScroll: true
+        });
+
+    }, 80);
 
 }
 
@@ -1953,6 +1986,12 @@ function closeInboxModal() {
     document
         .querySelector("#inboxModal")
         ?.classList.add("hidden");
+
+    document.body.classList.remove(
+        "inbox-modal-open"
+    );
+
+    setMobileQuickNoteVisibility(false);
 
 }
 

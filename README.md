@@ -340,3 +340,16 @@ V5.3 沒有更改既有 Firestore 資料結構。
 - `users/{uid}/inboxNotes`
 
 本版主要為介面與操作體驗更新，不會搬移或重建既有案場、工作與待整理資料。
+
+
+---
+
+## Yao V5.3.1｜iPhone 快速記錄修正
+
+- 修正 iPhone Safari 點選輸入框時頁面自動放大
+- 手機版 input / textarea / select 字體至少 16px
+- 快速記錄視窗開啟時，右下「＋ 記一下」自動隱藏
+- 鍵盤彈出時使用動態視窗高度，快速記錄視窗會配合可視範圍縮放
+- 「取消／先記下來」操作列保持在視窗下方，減少被鍵盤遮住的情況
+- Service Worker 快取更新為 `yao-v10-mobile-fix`
+- Firestore 資料結構完全不變

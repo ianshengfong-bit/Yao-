@@ -1,10 +1,14 @@
-const CACHE_NAME = "yao-v11-realtime-fix";
+const CACHE_NAME = "yao-v12-administration-beta";
 
 const FILES_TO_CACHE = [
     "./",
     "./index.html",
     "./style.css",
     "./app.js",
+    "./admin.js",
+    "./admin-core.js",
+    "./admin-store.js",
+    "./admin.css",
     "./manifest.json",
     "./icon.svg"
 ];

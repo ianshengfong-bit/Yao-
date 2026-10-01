@@ -1,0 +1,13 @@
+// Insert these TWO blocks inside the existing service cloud.firestore /
+// match /databases/{database}/documents block. Keep all existing rules.
+// They permit only the signed-in owner to read/write the new administrative data.
+// A broad existing allow rule also applies: audit such rules separately before
+// relying on these blocks for account isolation.
+
+match /users/{userId}/adminTasks/{taskId} {
+    allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+
+match /users/{userId}/adminRecurring/{templateId} {
+    allow read, write: if request.auth != null && request.auth.uid == userId;
+}

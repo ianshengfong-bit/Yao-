@@ -37,6 +37,9 @@ import {
     initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
+import {createAdministration} from "./admin.js";
+import {createAdminStore} from "./admin-store.js";
+
 import {
     getAuth,
     onAuthStateChanged,
@@ -112,6 +115,16 @@ let dataReady = false;
 let projectsReady = false;
 
 let itemsReady = false;
+
+const administration = createAdministration({
+    getUser: () => currentUser,
+    getProjects: () => projects,
+    getSearch: () => document.querySelector("#searchInput")?.value || "",
+    isActive: () => currentPage === "administration",
+    getStore: uid => createAdminStore(db, uid),
+    toast,
+    openProject: () => openProjectModal()
+});
 
 
 /* =========================================================
@@ -1272,6 +1285,8 @@ onAuthStateChanged(
 
 async function startRealtimeData() {
 
+    administration.reset();
+
     dataReady = false;
 
     projectsReady = false;
@@ -1331,6 +1346,8 @@ async function startRealtimeData() {
                     );
 
                 projectsReady = true;
+
+                administration.onProjectsChanged();
 
                 console.log(
                     "YAO：案場資料同步完成",
@@ -1471,6 +1488,8 @@ function updateDataReady() {
 ========================================================= */
 
 function stopRealtimeData() {
+
+    administration.reset();
 
     if (unsubscribeProjects) {
 
@@ -1656,6 +1675,9 @@ function render() {
         dashboard:
             "儀表板",
 
+        administration:
+            "行政",
+
         calendar:
             "行事曆",
 
@@ -1714,6 +1736,10 @@ function render() {
 
     const data =
         filteredItems();
+
+    if (currentPage === "administration") {
+        administration.render();
+    }
 
 
     if (
@@ -7440,7 +7466,11 @@ if (headerAddBtn) {
     headerAddBtn.onclick =
         function () {
 
-            openItemModal();
+            if (currentPage === "administration") {
+                administration.openNew();
+            } else {
+                openItemModal();
+            }
 
         };
 

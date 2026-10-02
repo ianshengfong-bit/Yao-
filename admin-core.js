@@ -1,6 +1,7 @@
 // Administrative dates are date-only values in the project's Taiwan timezone.
 export const STATUSES = ['待準備', '待送出', '已送出', '待回覆', '已完成'];
 export const RECIPIENTS = ['監造', '機關', '公司內部', '廠商'];
+export const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 export function todayISO(now = new Date()) {
     const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit'
@@ -55,7 +56,13 @@ export function summary(tasks, today = todayISO()) {
         waiting: open.filter(t => t.status === '待回覆' || t.reviewStatus === '審查中')
     };
 }
-export function occurrenceId(templateId, month) { return `${templateId}_${month}`; }
+export function frequencyOf(template) { return template.frequency === 'weekly' ? 'weekly' : 'monthly'; }
+export function recurrenceLabel(template) {
+    return frequencyOf(template) === 'weekly' ? `每週${WEEKDAYS[template.weekday]}` : `每月 ${template.day} 日`;
+}
+export function occurrenceId(templateId, key, frequency = 'monthly') {
+    return frequency === 'weekly' ? `${templateId}_week_${key}` : `${templateId}_${key}`;
+}
 export function monthsToGenerate(template, today = todayISO()) {
     if (!template.active || !/^\d{4}-\d{2}$/.test(template.startMonth || '')) return [];
     const last = shiftMonth(today.slice(0, 7), 1);
@@ -64,6 +71,32 @@ export function monthsToGenerate(template, today = todayISO()) {
         months.push(month);
     }
     return months;
+}
+// Weekly IDs are based on Monday, so changing the weekday never duplicates an
+// already-created week. Existing monthly IDs remain compatible with version 1.
+export function occurrenceKeys(template, today = todayISO()) {
+    if (frequencyOf(template) === 'monthly') return monthsToGenerate(template, today);
+    if (!template.active || !validDate(template.startDate) || !Number.isInteger(template.weekday) || template.weekday < 0 || template.weekday > 6) return [];
+    const end = occurrenceDate(shiftMonth(today.slice(0, 7), 1), 31);
+    const keys = [];
+    for (let week = weekRange(template.startDate)[0]; week <= end; week = shiftDate(week, 7)) {
+        const date = shiftDate(week, (template.weekday + 6) % 7);
+        if (date >= template.startDate && date <= end) keys.push(week);
+    }
+    return keys;
+}
+export function taskWindow(tasks, range = 'near', today = todayISO()) {
+    return tasks.filter(task => {
+        if (task.archived) return false;
+        if (range === 'done') return task.status === '已完成';
+        if (task.status === '已完成') return false;
+        if (range === 'all') return true;
+        if (range === 'month') return task.date?.startsWith(today.slice(0, 7));
+        if (range === 'next') return task.date?.startsWith(shiftMonth(today.slice(0, 7), 1));
+        // Show overdue work even from previous months, but keep future schedules
+        // out of the everyday view until they are within seven days.
+        return task.date <= shiftDate(today, 7);
+    });
 }
 export function validateTask(data) {
     if (!data.projectId) throw new Error('請先選擇案場。');
@@ -77,15 +110,17 @@ export function validateTask(data) {
 export function historyEntry(action, detail, uid, now = Date.now()) {
     return {action, detail, actor: uid, at: now};
 }
-export function makeOccurrence(template, month, uid, now = Date.now()) {
+export function makeOccurrence(template, key, uid, now = Date.now()) {
+    const frequency = frequencyOf(template);
+    const date = frequency === 'weekly' ? shiftDate(key, (template.weekday + 6) % 7) : occurrenceDate(key, template.day);
     return {
         projectId: template.projectId, title: template.title, note: template.note || '',
-        recipient: template.recipient, date: occurrenceDate(month, template.day),
+        recipient: template.recipient, date,
         status: '待準備', isSubmission: !!template.isSubmission,
         reviewStatus: template.isSubmission ? '準備中' : '', submissions: [],
-        recurringId: template.id, month, archived: false,
+        recurringId: template.id, recurrenceFrequency: frequency, month: date.slice(0, 7), archived: false,
         createdAt: now, updatedAt: now,
-        history: [historyEntry('固定事項建立', `${month} · 每月 ${template.day} 日`, uid, now)]
+        history: [historyEntry('固定事項建立', `${date} · ${recurrenceLabel(template)}`, uid, now)]
     };
 }
 export function changeTask(task, action, payload, uid, now = Date.now()) {
@@ -93,10 +128,10 @@ export function changeTask(task, action, payload, uid, now = Date.now()) {
     let detail;
     if (action === 'edit') {
         validateTask({...task, ...payload});
-        const fields = ['title', 'date', 'note', 'recipient'];
+        const fields = ['title', 'date', 'note', 'recipient', ...(payload.projectId !== undefined ? ['projectId'] : [])];
         patch = Object.fromEntries(fields.map(key => [key, payload[key]]));
         detail = fields.filter(key => task[key] !== patch[key]).map(key =>
-            `${({title:'名稱', date:'期限', note:'備註', recipient:'提交對象'})[key]}：${task[key] || '無'} → ${patch[key] || '無'}`).join('；');
+            `${({title:'名稱', date:'期限', note:'備註', recipient:'提交對象', projectId:'案場'})[key]}：${task[key] || '無'} → ${patch[key] || '無'}`).join('；');
         if (!detail) throw new Error('資料沒有變更。');
     } else if (action === 'status') {
         if (!STATUSES.includes(payload.status)) throw new Error('工作狀態無效。');

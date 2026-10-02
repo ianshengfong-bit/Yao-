@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-v12-administration-beta";
+const CACHE_NAME = "yao-v13-administration-workspace";
 
 const FILES_TO_CACHE = [
     "./",

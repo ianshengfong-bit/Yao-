@@ -570,7 +570,7 @@
 
             <label>
 
-                第一階段提醒
+                提前幾天提醒
 
                 <select id="itemReminder">
 
@@ -615,7 +615,7 @@
                         "
                     >
 
-                    當天提前 1 小時提醒
+                    提前 1 小時提醒
 
                 </span>
 
@@ -624,12 +624,14 @@
                     class="form-hint"
                     style="margin-top:6px"
                 >
-                    例如工作時間為 09:00，將於當天 08:00 再提醒一次
+                    例如工作時間為 09:00，將於 08:00 提醒；未填時間則採 09:00。
                 </div>
 
             </label>
 
 
+
+            <label class="item-at-time"><span style="display:flex;align-items:center;gap:8px"><input id="itemAtTimeReminder" type="checkbox" checked style="width:auto;margin:0">到工作時間時提醒</span><div class="form-hint" style="margin-top:6px">TG 會在時間到後通知，通常約延後 1 分鐘；未填時間採 09:00。</div></label>
 
             <div class="modal-actions">
 

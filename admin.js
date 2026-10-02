@@ -330,6 +330,9 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         dialogKind = 'new'; dialogId = '';
         taskForm(null, {date,recurring,submission,title,note,recipient,projectId:targetProject || (projectId !== 'all' ? projectId : quickDraft.projectId)});
     }
+    function reminderFields(record = {}) {
+        return `<details class="admin-form-extra" ${record.time ? 'open' : ''}><summary>TG 提醒${record.time ? ` · ${e(record.time)}` : ' · 設定時間'}</summary><label>提醒時間<input name="time" type="time" value="${e(record.time || '')}"></label><p class="form-hint">填時間後會用 TG 提醒；留空則只看早上總覽。時間到後通常約延後 1 分鐘。</p><label class="admin-again-option"><input name="reminderAtTime" type="checkbox" value="true" ${record.reminderAtTime !== false ? 'checked' : ''}>到設定時間時提醒</label><label>提前幾天<select name="reminder">${[['none','不提前'],['1','提前 1 天'],['3','提前 3 天'],['7','提前 7 天']].map(([v,l]) => `<option value="${v}" ${String(record.reminder || 'none') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="admin-again-option"><input name="reminderOneHour" type="checkbox" value="true" ${record.reminderOneHour ? 'checked' : ''}>提前 1 小時再提醒</label></details>`;
+    }
     function taskForm(task, defaults = {}) {
         dialogKind = task ? 'edit' : 'new'; dialogId = task?.id || '';
         const compact = window.matchMedia('(max-width:768px)').matches;
@@ -341,6 +344,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             <div class="form-grid"><label>截止日期<input name="date" type="date" required value="${e(task?.date || defaults.date || todayISO())}" min="2000-01-01" max="2100-12-31"></label><label>提交對象<select name="recipient">${options(RECIPIENTS,task?.recipient || defaults.recipient || '監造')}</select></label></div>
             <div class="admin-date-presets"><button type="button" data-admin="form-date" data-days="0">今天</button><button type="button" data-admin="form-date" data-days="1">明天</button><button type="button" data-admin="form-date" data-days="7">一週後</button></div>
             ${task ? '' : `<fieldset class="admin-schedule-choice"><legend>多久做一次</legend>${[['once','單次'],['weekly','每週固定'],['monthly','每月固定']].map(([key,label]) => `<label><input type="radio" name="schedule" value="${key}" ${key === (defaults.recurring === true ? 'monthly' : defaults.recurring || 'once') ? 'checked' : ''}><span>${label}</span></label>`).join('')}</fieldset><div id="adminSchedulePreview" class="admin-schedule-preview"></div>`}
+            ${reminderFields(task || defaults)}
             ${compact ? `<details class="admin-form-extra" ${defaults.submission || task?.note || defaults.note ? 'open' : ''}><summary>備註${task ? '' : '與送審設定'}</summary>${extras}</details>` : extras}
             <div class="modal-actions"><button class="btn" type="button" data-admin="close">取消</button>${task || compact ? '' : '<button class="btn" type="submit" data-again="true">儲存並再新增</button>'}<button class="btn primary" type="submit">${task ? '儲存修改' : '新增工作'}</button></div></form>`);
         updateSchedulePreview();
@@ -363,7 +367,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         const controls = task.archived ? `<button class="btn" data-admin="restore" data-id="${e(id)}">恢復事項</button>` : `<button class="btn" data-admin="edit" data-id="${e(id)}">編輯</button><button class="btn" data-admin="copy" data-id="${e(id)}">再新增類似工作</button><button class="btn" data-admin="archive" data-id="${e(id)}">封存</button>`;
         const rounds = (task.submissions || []).map(s => `<li><strong>V${s.version} · ${e(s.status)}</strong><p>送至 ${e(s.recipient)} · ${e(timestamp(s.submittedAt))}</p><p>${e(s.note || '無送審備註')}</p>${s.reviewedAt ? `<p>${e(timestamp(s.reviewedAt))} · ${e(s.reviewNote || '無審查備註')}</p>` : ''}</li>`).join('');
         showDialog(task.title, `<div class="admin-detail-summary">${badge(task)}<span class="admin-badge">${task.recurringId ? task.recurrenceFrequency === 'weekly' ? '每週固定' : '每月固定' : '單次事項'}</span>${task.archived ? '<span class="admin-badge">已封存</span>' : ''}</div>
-            <dl class="admin-detail-fields"><div><dt>案場</dt><dd>${e(projectName(task.projectId))}</dd></div><div><dt>截止日期</dt><dd>${pretty(task.date)}</dd></div><div><dt>提交對象</dt><dd>${e(task.recipient)}</dd></div><div><dt>工作狀態</dt><dd>${e(task.status)}</dd></div>${task.isSubmission ? `<div><dt>送審結果</dt><dd>${e(task.reviewStatus)}</dd></div>` : ''}</dl>
+            <dl class="admin-detail-fields"><div><dt>案場</dt><dd>${e(projectName(task.projectId))}</dd></div><div><dt>截止日期</dt><dd>${pretty(task.date)}</dd></div><div><dt>TG 提醒</dt><dd>${task.time ? `${e(task.time)}${task.reminderAtTime === false ? ' · 只提前提醒' : ' · 到時通知'}` : '早上總覽'}</dd></div><div><dt>提交對象</dt><dd>${e(task.recipient)}</dd></div><div><dt>工作狀態</dt><dd>${e(task.status)}</dd></div>${task.isSubmission ? `<div><dt>送審結果</dt><dd>${e(task.reviewStatus)}</dd></div>` : ''}</dl>
             <div class="admin-status-track">${STATUSES.map(s => `<span class="${s === task.status ? 'active' : ''}">${s}</span>`).join('<span aria-hidden="true">›</span>')}</div>
             <h3>準備內容／備註</h3><p class="admin-note">${e(task.note || '尚未填寫')}</p>
             ${!task.archived ? `<form id="adminStatusForm"><label>更新工作狀態<select name="status">${options(STATUSES,task.status)}</select></label><button class="btn primary" type="submit">更新狀態</button></form>` : ''}
@@ -390,6 +394,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             <label>事項名稱<input name="title" required maxlength="160" value="${e(template.title)}"></label>
             <label>案場<select name="projectId" required>${projectOptions(template.projectId)}</select></label>
             <div class="form-grid">${frequencyOf(template) === 'weekly' ? `<label>每週星期<select name="weekday">${[1,2,3,4,5,6,0].map(day => `<option value="${day}" ${template.weekday === day ? 'selected' : ''}>星期${WEEKDAYS[day]}</option>`).join('')}</select></label>` : `<label>每月日期<input name="day" type="number" min="1" max="31" required value="${template.day}"></label>`}<label>提交對象<select name="recipient">${options(RECIPIENTS,template.recipient)}</select></label></div>
+            ${reminderFields(template)}
             <label>準備內容／備註<textarea name="note" rows="4" maxlength="4000">${e(template.note)}</textarea></label>
             <div class="modal-actions"><button class="btn" type="button" data-admin="close">取消</button><button class="btn primary" type="submit">儲存設定</button></div></form>`);
     }
@@ -509,11 +514,12 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         const data = Object.fromEntries(new FormData(event.target));
         if (event.target.id === 'adminMobileFilterForm') { statusFilter = data.status; recipientFilter = data.recipient; closeDialog(); render(); return; }
         if (typeof data.title === 'string') data.title = data.title.trim();
+        if (['new','edit','template'].includes(dialogKind) && event.target.id !== 'adminStatusForm') {data.reminderAtTime = data.reminderAtTime === 'true'; data.reminderOneHour = data.reminderOneHour === 'true';}
         const id = dialogId, kind = dialogKind, again = event.submitter?.dataset.again === 'true' || data.again === 'true';
         if (['new','edit','template'].includes(kind) && event.target.id !== 'adminStatusForm' && !getProjects().some(p => p.id === data.projectId && (!p.archived || p.id === tasks.find(t => t.id === id)?.projectId || p.id === templates.find(t => t.id === id)?.projectId))) { dialog.querySelector('.admin-dialog-error').textContent = '請選擇使用中的案場。'; return; }
         await perform(async s => {
             if (event.target.id === 'adminStatusForm') await s.mutate(id,'status',data);
-            else if (kind === 'new') await s.create({projectId:data.projectId, title:data.title, date:data.date, recipient:data.recipient, note:data.note, status:'待準備', isSubmission:data.kind === 'submission'},data.schedule === 'once' ? false : data.schedule);
+            else if (kind === 'new') await s.create({projectId:data.projectId, title:data.title, date:data.date, time:data.time || '', reminder:data.reminder || 'none', reminderAtTime:data.reminderAtTime, reminderOneHour:data.reminderOneHour, recipient:data.recipient, note:data.note, status:'待準備', isSubmission:data.kind === 'submission'},data.schedule === 'once' ? false : data.schedule);
             else if (kind === 'edit') await s.mutate(id,'edit',data);
             else if (kind === 'template') await s.editTemplate(id,data);
             else if (kind === 'submit' || kind === 'review') await s.mutate(id,kind,data);

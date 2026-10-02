@@ -1,4 +1,5 @@
-// Administrative dates are date-only values in the project's Taiwan timezone.
+import {telegramSchedule, validReminderTime} from "./reminder-core.js";
+// Administrative dates and optional reminder times use Taiwan time.
 export const STATUSES = ['待準備', '待送出', '已送出', '待回覆', '已完成'];
 export const RECIPIENTS = ['監造', '機關', '公司內部', '廠商'];
 export const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -103,6 +104,7 @@ export function validateTask(data) {
     if (!data.title?.trim()) throw new Error('請輸入事項名稱。');
     if (data.title.length > 160 || (data.note || '').length > 4000) throw new Error('名稱最多 160 字，備註最多 4000 字。');
     if (!validDate(data.date)) throw new Error('請填寫有效日期。');
+    if (data.time && !validReminderTime(data.time)) throw new Error('請填寫有效提醒時間。');
     if (!STATUSES.includes(data.status)) throw new Error('工作狀態無效。');
     if (!RECIPIENTS.includes(data.recipient)) throw new Error('請選擇提交對象。');
     return data;
@@ -113,8 +115,9 @@ export function historyEntry(action, detail, uid, now = Date.now()) {
 export function makeOccurrence(template, key, uid, now = Date.now()) {
     const frequency = frequencyOf(template);
     const date = frequency === 'weekly' ? shiftDate(key, (template.weekday + 6) % 7) : occurrenceDate(key, template.day);
-    return {
+    const task = {
         projectId: template.projectId, title: template.title, note: template.note || '',
+        time:template.time || '', reminder:template.reminder || 'none', reminderAtTime:template.reminderAtTime !== false, reminderOneHour:template.reminderOneHour === true,
         recipient: template.recipient, date,
         status: '待準備', isSubmission: !!template.isSubmission,
         reviewStatus: template.isSubmission ? '準備中' : '', submissions: [],
@@ -122,16 +125,17 @@ export function makeOccurrence(template, key, uid, now = Date.now()) {
         createdAt: now, updatedAt: now,
         history: [historyEntry('固定事項建立', `${date} · ${recurrenceLabel(template)}`, uid, now)]
     };
+    return {...task, tgMinutes:telegramSchedule(task,'adminTasks'), tgScheduleVersion:1};
 }
 export function changeTask(task, action, payload, uid, now = Date.now()) {
     let patch;
     let detail;
     if (action === 'edit') {
         validateTask({...task, ...payload});
-        const fields = ['title', 'date', 'note', 'recipient', ...(payload.projectId !== undefined ? ['projectId'] : [])];
+        const fields = ['title', 'date', 'note', 'recipient', ...['time','reminder','reminderAtTime','reminderOneHour'].filter(key => payload[key] !== undefined), ...(payload.projectId !== undefined ? ['projectId'] : [])];
         patch = Object.fromEntries(fields.map(key => [key, payload[key]]));
         detail = fields.filter(key => task[key] !== patch[key]).map(key =>
-            `${({title:'名稱', date:'期限', note:'備註', recipient:'提交對象', projectId:'案場'})[key]}：${task[key] || '無'} → ${patch[key] || '無'}`).join('；');
+            `${({title:'名稱', date:'期限', note:'備註', recipient:'提交對象', projectId:'案場', time:'提醒時間', reminder:'提前天數', reminderAtTime:'到時提醒', reminderOneHour:'提前一小時'})[key]}：${task[key] || '無'} → ${patch[key] || '無'}`).join('；');
         if (!detail) throw new Error('資料沒有變更。');
     } else if (action === 'status') {
         if (!STATUSES.includes(payload.status)) throw new Error('工作狀態無效。');
@@ -164,5 +168,5 @@ export function changeTask(task, action, payload, uid, now = Date.now()) {
         detail = action === 'archive' ? '移出月曆與提醒，保留歷程' : '恢復事項';
     } else throw new Error('操作無效。');
     const label = {edit:'編輯事項', status:'狀態變更', submit:'登記送審', review:'審查結果', archive:'封存事項', restore:'恢復事項'}[action];
-    return {...patch, updatedAt: now, history: [...(task.history || []), historyEntry(label, detail, uid, now)]};
+    return {...patch, tgMinutes:telegramSchedule({...task,...patch},'adminTasks'), tgScheduleVersion:1, updatedAt: now, history: [...(task.history || []), historyEntry(label, detail, uid, now)]};
 }

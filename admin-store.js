@@ -1,3 +1,4 @@
+import {telegramSchedule} from './reminder-core.js';
 import {collection, doc, onSnapshot, runTransaction} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 import {changeTask, historyEntry, makeOccurrence, occurrenceKeys, occurrenceId, validateTask, frequencyOf, recurrenceLabel, weekRange} from './admin-core.js';
 
@@ -24,6 +25,7 @@ export function createAdminStore(db, uid) {
                     const template = {
                         projectId:data.projectId, title:data.title, note:data.note,
                         recipient:data.recipient, isSubmission:data.isSubmission,
+                        time:data.time || '', reminder:data.reminder || 'none', reminderAtTime:data.reminderAtTime !== false, reminderOneHour:data.reminderOneHour === true,
                         frequency,
                         ...(frequency === 'weekly' ? {startDate:data.date, weekday:new Date(`${data.date}T00:00:00Z`).getUTCDay()} : {day:Number(data.date.slice(8)), startMonth:data.date.slice(0,7)}),
                         active:true, createdAt:now, updatedAt:now,
@@ -34,7 +36,7 @@ export function createAdminStore(db, uid) {
                     tx.set(doc(tasks, occurrenceId(ref.id, key, frequency)), makeOccurrence({...template, id:ref.id}, key, uid, now));
                 } else {
                     tx.set(ref, {
-                        ...data, archived:false, reviewStatus:data.isSubmission ? '準備中' : '',
+                        ...data, tgMinutes:telegramSchedule(data,'adminTasks'), tgScheduleVersion:1, archived:false, reviewStatus:data.isSubmission ? '準備中' : '',
                         submissions:[], recurringId:'', createdAt:now, updatedAt:now,
                         history:[historyEntry('新增事項', `${data.date} · ${data.recipient}`, uid, now)]
                     });
@@ -61,6 +63,7 @@ export function createAdminStore(db, uid) {
                 const frequency = frequencyOf(old);
                 const patch = data.active !== undefined ? {active:!!data.active} : {
                     title:data.title.trim(), note:data.note, recipient:data.recipient,
+                    ...Object.fromEntries(['time','reminder','reminderAtTime','reminderOneHour'].filter(key => data[key] !== undefined).map(key => [key,data[key]])),
                     ...(data.projectId ? {projectId:data.projectId} : {}),
                     ...(frequency === 'weekly' ? {weekday:Number(data.weekday)} : {day:Number(data.day)})
                 };

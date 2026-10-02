@@ -39,6 +39,7 @@ import {
 
 import {createAdministration} from "./admin.js";
 import {createAdminStore} from "./admin-store.js";
+import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 
 import {
     getAuth,
@@ -2158,7 +2159,7 @@ function renderDashboard(data) {
             x =>
                 !x.done &&
                 x.date >= isoToday &&
-                x.reminder !== "none"
+                getReminderTimes(x).length > 0
         ).length;
 
 
@@ -3472,6 +3473,8 @@ function openItemModal(
 
         }
 
+        document.querySelector("#itemAtTimeReminder").checked = item.reminderAtTime === true || (item.reminderAtTime === undefined && validReminderTime(item.time));
+
     }
 
     else {
@@ -4497,108 +4500,8 @@ function renderCalendar(data) {
 ========================================================= */
 
 function getReminderTimes(item) {
-
-    const result = [];
-
-
-    if (
-        !item ||
-        !item.date
-    ) {
-        return result;
-    }
-
-
-    const workTime =
-        item.time || "09:00";
-
-
-    const reminderBefore =
-        item.reminder || "none";
-
-
-    /*
-     * 第一階段
-     * 提前 N 天
-     */
-
-    if (
-        reminderBefore !== "none"
-    ) {
-
-        const days =
-            parseInt(
-                reminderBefore,
-                10
-            );
-
-
-        if (
-            !isNaN(days) &&
-            days > 0
-        ) {
-
-            result.push({
-
-                stage: 1,
-
-                date:
-                    addDaysFromISO(
-                        item.date,
-                        -days
-                    ),
-
-                time:
-                    workTime,
-
-                label:
-                    `提前 ${days} 天`
-
-            });
-
-        }
-
-    }
-
-
-    /*
-     * 第二階段
-     * 提前 1 小時
-     */
-
-    if (
-        item.reminderOneHour === true
-    ) {
-
-        const oneHour =
-            subtractOneHour(
-                item.date,
-                workTime
-            );
-
-
-        result.push({
-
-            stage: 2,
-
-            date:
-                oneHour.date,
-
-            time:
-                oneHour.time,
-
-            label:
-                "提前 1 小時"
-
-        });
-
-    }
-
-
-    return result;
-
+    return reminderMoments(item).map(row => ({stage:row.stage === "before-hour" ? 2 : row.stage === "at-time" ? 3 : 1, date:row.minute.slice(0,10), time:row.minute.slice(11), label:row.label}));
 }
-
 
 /* =========================================================
 扣除一小時
@@ -6572,7 +6475,7 @@ function showReminderPopup(row) {
         ?
         "第二階段提醒：工作前 1 小時"
         :
-        `第一階段提醒：${row.label}`;
+        row.stage === 3 ? "到時間提醒" : `第一階段提醒：${row.label}`;
 
 
     /*
@@ -7029,10 +6932,14 @@ if (itemForm) {
                     :
                     false,
 
+                reminderAtTime: document.querySelector("#itemAtTimeReminder").checked,
                 done:
                     false
 
             };
+
+            data.tgMinutes = telegramSchedule(data);
+            data.tgScheduleVersion = 1;
 
 
             if (!data.title) {

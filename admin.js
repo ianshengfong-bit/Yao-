@@ -7,6 +7,9 @@ const timestamp = at => new Intl.DateTimeFormat('zh-TW', {
     timeZone:'Asia/Taipei', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', year:'numeric', hour12:false
 }).format(new Date(at));
 const options = (values, selected) => values.map(v => `<option value="${e(v)}" ${v === selected ? 'selected' : ''}>${e(v)}</option>`).join('');
+const mobileIcon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${({menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',dots:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',down:'<path d="m7 10 5 5 5-5"/>',filter:'<path d="M4 7h16M7 12h10M10 17h4"/>'})[name] || ''}</svg>`;
+const VIEWS = [['overview','待辦','grid'],['calendar','月曆','calendar'],['reviews','送審追蹤','file'],['recurring','固定排程','repeat'],['history','歷程','clock']];
+const allowedStatuses = task => STATUSES.filter(s => !task.isSubmission || (s !== '已完成' || task.reviewStatus === '核定') && (!['已送出','待回覆'].includes(s) || task.reviewStatus === '審查中'));
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${({check:'<path d="m5 12 4 4L19 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18"/>',repeat:'<path d="M4 9a8 8 0 0 1 13-5l3 3m0-5v5h-5M20 15A8 8 0 0 1 7 20l-3-3m0 5v-5h5"/>',file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Zm0 0v6h6M8 13h8m-8 4h5"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',edit:'<path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15Z"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'})[name] || ''}</svg>`;
 
 export function createAdministration({getUser, getProjects, getSearch, isActive, getStore, toast, openProject}) {
@@ -16,13 +19,21 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
     let month = todayISO().slice(0, 7), selectedDate = todayISO();
     let generating = false, generationRequested = false, busy = false, lastToday = todayISO();
     let returnFocus = null, returnSelector = '', dialogKind = '', dialogId = '', dialogEpoch = 0;
-    let quickDraft = {title:'',date:todayISO(),projectId:'',recipient:'監造'}, notice = null;
+    let quickDraft = {title:'',date:todayISO(),projectId:'',recipient:'監造'}, notice = null, mobileSearchOpen = false;
     const app = document.querySelector('#app');
     const overlay = document.createElement('div');
     overlay.className = 'modal-backdrop hidden admin-modal-backdrop';
     overlay.innerHTML = '<div class="modal admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminDialogTitle" tabindex="-1"></div>';
     document.body.append(overlay);
     const dialog = overlay.firstElementChild;
+    function fitDialog() {
+        if (overlay.classList.contains('hidden')) return;
+        const viewport = window.visualViewport;
+        overlay.style.setProperty('--admin-viewport-height',`${viewport?.height || window.innerHeight}px`);
+        overlay.style.setProperty('--admin-viewport-top',`${viewport?.offsetTop || 0}px`);
+    }
+    window.visualViewport?.addEventListener('resize',fitDialog);
+    window.visualViewport?.addEventListener('scroll',fitDialog);
 
     function chosenProject() {
         const projects = getProjects();
@@ -54,12 +65,13 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         const done = task.status === '已完成';
         const cadence = task.recurringId ? (task.recurrenceFrequency === 'weekly' ? '每週固定' : '每月固定') : '';
         const action = task.isSubmission ? (task.reviewStatus === '審查中' ? 'review' : task.reviewStatus === '核定' ? '' : 'submit') : done ? '' : 'complete';
-        const allowed = STATUSES.filter(s => !task.isSubmission || (s !== '已完成' || task.reviewStatus === '核定') && (!['已送出','待回覆'].includes(s) || task.reviewStatus === '審查中'));
+        const allowed = allowedStatuses(task), u = urgency(task);
+        const mobileDate = u.level === 'overdue' ? u.label : task.date === todayISO() ? '今天' : pretty(task.date).slice(5);
         return `<article class="admin-task-row ${done ? 'is-done' : ''}" data-task-id="${e(task.id)}">
             <button class="admin-complete ${done ? 'is-checked' : ''}" data-admin="${task.isSubmission ? 'detail' : done ? 'reopen' : 'complete'}" data-id="${e(task.id)}" aria-label="${task.isSubmission ? '查看送審' : done ? '重新開啟' : '完成'}：${e(task.title)}" ${busy ? 'disabled' : ''}>${done ? icon('check') : task.isSubmission ? icon('file') : ''}</button>
-            <button type="button" class="admin-row-main" data-admin="detail" data-id="${e(task.id)}"><strong>${e(task.title)}</strong><span>${projectId === 'all' ? `<span class="admin-project-tag">${e(projectName(task.projectId))}</span>` : ''}${e(task.recipient)}${cadence ? ` <span class="admin-recurring-tag">${icon('repeat')}${cadence}</span>` : ''}${task.isSubmission ? ` · ${e(task.reviewStatus)}${task.submissions?.length ? ` V${task.submissions.at(-1).version}` : ''}` : ''}</span></button>
+            <button type="button" class="admin-row-main" data-admin="detail" data-id="${e(task.id)}"><strong>${e(task.title)}</strong><span class="admin-row-desktop-meta">${projectId === 'all' ? `<span class="admin-project-tag">${e(projectName(task.projectId))}</span>` : ''}${e(task.recipient)}${cadence ? ` <span class="admin-recurring-tag">${icon('repeat')}${cadence}</span>` : ''}${task.isSubmission ? ` · ${e(task.reviewStatus)}${task.submissions?.length ? ` V${task.submissions.at(-1).version}` : ''}` : ''}</span><span class="admin-row-mobile-meta"><span class="admin-${u.level}">${e(mobileDate)}</span><span>· ${e(task.recipient)} · ${e(task.isSubmission ? task.reviewStatus : task.status)}${task.isSubmission && task.submissions?.length ? ` V${task.submissions.at(-1).version}` : ''}</span>${cadence ? `<span aria-label="${cadence}" title="${cadence}">${icon('repeat')}</span>` : ''}</span>${projectId === 'all' ? `<span class="admin-mobile-task-project">${e(projectName(task.projectId))}</span>` : ''}</button>
             <div class="admin-row-deadline"><span>${e(pretty(task.date).slice(5))} 週${WEEKDAYS[new Date(`${task.date}T00:00:00Z`).getUTCDay()]}</span>${badge(task)}</div>
-            <div class="admin-row-actions"><select class="admin-inline-status" data-task-status="${e(task.id)}" aria-label="${e(task.title)}的工作狀態" ${busy ? 'disabled' : ''}>${options(allowed,task.status)}</select>${task.isSubmission && action ? `<button class="btn admin-row-review" data-admin="${action}" data-id="${e(task.id)}" ${busy ? 'disabled' : ''}>${action === 'submit' ? '登記送審' : '記錄結果'}</button>` : ''}<button class="admin-edit-button" data-admin="edit" data-id="${e(task.id)}" aria-label="編輯：${e(task.title)}">${icon('edit')}</button></div></article>`;
+            <div class="admin-row-actions"><select class="admin-inline-status" data-task-status="${e(task.id)}" aria-label="${e(task.title)}的工作狀態" ${busy ? 'disabled' : ''}>${options(allowed,task.status)}</select>${task.isSubmission && action ? `<button class="btn admin-row-review" data-admin="${action}" data-id="${e(task.id)}" ${busy ? 'disabled' : ''}>${action === 'submit' ? '登記送審' : '記錄結果'}</button>` : ''}<button class="admin-edit-button" data-admin="edit" data-id="${e(task.id)}" aria-label="編輯：${e(task.title)}">${icon('edit')}</button></div><button class="admin-mobile-row-more" data-admin="row-actions" data-id="${e(task.id)}" aria-label="操作：${e(task.title)}">${mobileIcon('dots')}</button></article>`;
     }
     function taskList(list, empty = '這裡目前沒有事項。') {
         return list.length ? `<div class="admin-task-list">${[...list].sort((a,b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title)).map(row).join('')}</div>` : `<div class="admin-empty">${e(empty)}</div>`;
@@ -132,7 +144,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         stop?.(); stop = null; uid = null; store = null;
         tasks = []; templates = []; tasksReady = false; templatesReady = false;
         error = ''; generationError = ''; generating = false; generationRequested = false;
-        projectId = 'all'; tab = 'overview'; filter = 'all'; statusFilter = ''; recipientFilter = ''; range = 'near'; notice = null;
+        projectId = 'all'; tab = 'overview'; filter = 'all'; statusFilter = ''; recipientFilter = ''; range = 'near'; notice = null; mobileSearchOpen = false;
         quickDraft = {title:'',date:todayISO(),projectId:'',recipient:'監造'};
         month = todayISO().slice(0,7); selectedDate = todayISO(); busy = false;
         closeDialog(); updateBadge();
@@ -188,7 +200,10 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         const ranges = [['near','近期'],['month',`${Number(today.slice(5,7))} 月`],['next',`${Number(shiftMonth(today.slice(0,7),1).slice(5))} 月`],['all','所有待辦'],['done','已完成']];
         const names = {today:'今天到期',week:'本週事項',overdue:'逾期待辦',waiting:'所有日期的待回覆',date:`${pretty(selectedDate).slice(5)} 當日事項`};
         const future = all.filter(t => !t.archived && t.status !== '已完成' && t.date.startsWith(shiftMonth(today.slice(0,7),1))).length;
-        return `<div class="admin-stats">${stat('today','今天',s.today.length,'今天到期','calendar')}${stat('week','本週',s.week.length,`${pretty(start).slice(5)}–${pretty(end).slice(5)}`,'grid')}${stat('overdue','逾期',s.overdue.length,'優先處理','clock')}${stat('waiting','待回覆',s.waiting.length,'追蹤已送出的文件','file')}</div>
+        const mobileRange = filter === 'all' ? range : filter;
+        const mobileRanges = [['near','近期'],['today',`今天 (${s.today.length})`],['week',`本週 (${s.week.length})`],['overdue',`逾期 (${s.overdue.length})`],['waiting',`待回覆 (${s.waiting.length})`],['month','本月'],['next','下個月'],['all','所有待辦'],['done','已完成']];
+        if (filter === 'date') mobileRanges.push(['date',pretty(selectedDate).slice(5)]);
+        return `<div class="admin-mobile-listbar"><label><span class="admin-sr-only">查看工作範圍</span><select id="adminMobileRange" aria-label="查看工作範圍">${mobileRanges.map(([key,label]) => `<option value="${key}" ${key === mobileRange ? 'selected' : ''}>${label}</option>`).join('')}</select></label><span>${list.length} 件</span><button data-admin="mobile-filters" aria-label="篩選工作" class="${statusFilter || recipientFilter ? 'is-filtered' : ''}">${mobileIcon('filter')}篩選${statusFilter || recipientFilter ? ' ·' : ''}</button></div><div class="admin-stats">${stat('today','今天',s.today.length,'今天到期','calendar')}${stat('week','本週',s.week.length,`${pretty(start).slice(5)}–${pretty(end).slice(5)}`,'grid')}${stat('overdue','逾期',s.overdue.length,'優先處理','clock')}${stat('waiting','待回覆',s.waiting.length,'追蹤已送出的文件','file')}</div>
             <div class="admin-workspace-grid"><section class="card admin-work-card"><div class="admin-section-head"><div><span class="admin-eyebrow">${projectId === 'all' ? '全部案場' : e(projectName(projectId))}</span><h3>待辦工作</h3></div><button class="btn" data-admin="new">${icon('plus')}新增事項</button></div>${composer()}<div class="admin-list-toolbar"><div class="admin-range-tabs" role="group" aria-label="工作日期範圍">${ranges.map(([key,label]) => `<button data-admin="range" data-range="${key}" class="${range === key && filter === 'all' ? 'active' : ''}" aria-pressed="${range === key && filter === 'all'}">${label}</button>`).join('')}</div><details class="admin-filter-menu" ${statusFilter || recipientFilter ? 'open' : ''}><summary>篩選${statusFilter || recipientFilter ? ' · 已套用' : ''}</summary><div class="admin-filter-popover"><label>工作狀態<select id="adminStatusFilter"><option value="">全部狀態</option>${options(STATUSES,statusFilter)}</select></label><label>提交對象<select id="adminRecipientFilter"><option value="">全部對象</option>${options(RECIPIENTS,recipientFilter)}</select></label><button class="admin-text-button" data-admin="clear-filters">清除篩選</button></div></details></div><div class="admin-range-description"><span>${filter === 'all' ? ({near:'逾期與未來 7 天，先看眼前要做的事。',month:`${Number(today.slice(5,7))} 月未完成工作`,next:`${Number(shiftMonth(today.slice(0,7),1).slice(5))} 月未來排程`,all:'所有日期的未完成工作',done:'所有日期的完成紀錄'})[range] : names[filter]}</span><span>${list.length} 件</span>${filter !== 'all' ? '<button class="admin-text-button" data-admin="filter" data-filter="all">回到近期</button>' : ''}</div>${groupedTasks(list)}${future && range !== 'next' && range !== 'all' && filter === 'all' ? `<button class="admin-future-link" data-admin="range" data-range="next">${icon('calendar')}下個月已安排 ${future} 件<span>查看${icon('arrow')}</span></button>` : ''}</section>
             <aside class="admin-workspace-aside">${weekStrip(all)}<section class="card admin-shortcuts"><div class="admin-section-head"><h3>常用工作</h3><span class="muted">少打幾個字</span></div>${[['施工日誌','彙整日誌與施作照片','once'],['人員名冊更新','核對人員與證照資料','monthly'],['本週進度彙整','整理進度與待處理事項','weekly'],['文件送審','保留每次送審版次','submission']].map(([title,hint,kind]) => `<button data-admin="preset" data-title="${title}" data-kind="${kind}"><span class="admin-shortcut-icon">${icon(kind === 'submission' ? 'file' : kind === 'once' ? 'edit' : 'repeat')}</span><span><strong>${title}</strong><small>${hint}</small></span>${icon('plus')}</button>`).join('')}</section><div class="admin-tip">${icon('check')}<p><strong>完成，就點左邊的圓圈。</strong><br>進度可以直接改；點工作名稱查看完整內容。</p></div></aside></div>`;
     }
@@ -246,10 +261,10 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
                 ${view}`;
         }
         const focused = app.contains(document.activeElement) ? document.activeElement : null;
-        const focusId = focused?.id, selection = focused?.tagName === 'INPUT' && focused.type === 'text' ? [focused.selectionStart,focused.selectionEnd] : null;
+        const focusId = focused?.id, selection = focused?.tagName === 'INPUT' && ['text','search'].includes(focused.type) ? [focused.selectionStart,focused.selectionEnd] : null;
         const focusedStatus = focused?.dataset.taskStatus;
         const projectScroll = app.querySelector('.admin-project-chips')?.scrollLeft || 0;
-        app.innerHTML = `<div class="admin-page"><div class="admin-heading"><span class="admin-eyebrow">${pretty(todayISO())} · 星期${WEEKDAYS[new Date(`${todayISO()}T00:00:00Z`).getUTCDay()]}</span><p>${getSearch().trim() ? `搜尋「${e(getSearch().trim())}」` : '先看近期工作，再安排下一步。'}</p></div>${projectSelect}${content}</div>`;
+        app.innerHTML = `<div class="admin-page">${mobileChrome()}<div class="admin-heading"><span class="admin-eyebrow">${pretty(todayISO())} · 星期${WEEKDAYS[new Date(`${todayISO()}T00:00:00Z`).getUTCDay()]}</span><p>${getSearch().trim() ? `搜尋「${e(getSearch().trim())}」` : '先看近期工作，再安排下一步。'}</p></div>${projectSelect}${content}</div>`;
         if (focusId) { const replacement = document.getElementById(focusId); replacement?.focus({preventScroll:true}); if (selection) replacement?.setSelectionRange(...selection); }
         else if (focusedStatus) app.querySelector(`[data-task-status="${CSS.escape(focusedStatus)}"]`)?.focus({preventScroll:true});
         const chips = app.querySelector('.admin-project-chips'), activeChip = chips?.querySelector('.active');
@@ -260,24 +275,46 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             else if (left + activeChip.offsetWidth > chips.scrollLeft + chips.clientWidth) chips.scrollLeft = left + activeChip.offsetWidth - chips.clientWidth;
         }
     }
+    function mobileChrome() {
+        const viewName = VIEWS.find(([key]) => key === tab)?.[1] || '待辦';
+        const addAction = tab === 'reviews' ? 'new-review' : tab === 'recurring' ? 'new-recurring' : 'new';
+        return `<header class="admin-mobile-header"><div><h1>行政</h1><span>${pretty(todayISO()).slice(5)} 週${WEEKDAYS[new Date(`${todayISO()}T00:00:00Z`).getUTCDay()]}</span></div><div><button data-admin="mobile-search" aria-label="${mobileSearchOpen ? '收起搜尋' : '搜尋工作'}" aria-expanded="${mobileSearchOpen}">${mobileIcon('search')}</button><button data-admin="mobile-nav" aria-label="Yao 選單">${mobileIcon('menu')}</button></div></header>${mobileSearchOpen || getSearch().trim() ? `<div class="admin-mobile-search"><input id="adminMobileSearch" type="search" aria-label="搜尋行政工作" placeholder="搜尋工作或案場" value="${e(getSearch())}"><button data-admin="mobile-search-clear" aria-label="清除並收起搜尋">×</button></div>` : ''}<div class="admin-mobile-context"><button data-admin="mobile-projects" aria-label="切換案場：${projectId === 'all' ? '全部案場' : e(projectName(projectId))}"><span>${projectId === 'all' ? '全部案場' : e(projectName(projectId))}</span>${mobileIcon('down')}</button><button data-admin="mobile-views" aria-label="行政功能：${viewName}">${viewName}${mobileIcon('down')}</button></div>${tasksReady && templatesReady && !error && getProjects().some(p => !p.archived) ? `<div class="admin-mobile-add"><button data-admin="${addAction}" data-date="${tab === 'calendar' ? selectedDate : todayISO()}" ${projectId !== 'all' && chosenProject()?.archived ? 'disabled' : ''}>${icon('plus')}${tab === 'reviews' ? '新增送審' : tab === 'recurring' ? '新增固定事項' : '新增工作'}</button></div>` : ''}`;
+    }
+    function mobileMenu(kind) {
+        dialogKind = kind; dialogId = '';
+        if (kind === 'mobile-projects') showDialog('切換案場', `<div class="admin-sheet-list">${[{id:'all',name:'全部案場'},...getProjects()].map(p => `<button data-admin="project" data-project="${e(p.id)}" class="${p.id === projectId ? 'is-selected' : ''}"><span>${e(p.name)}${p.archived ? '（已封存）' : ''}</span>${p.id === projectId ? icon('check') : ''}</button>`).join('')}</div>`);
+        else if (kind === 'mobile-views') showDialog('行政功能', `<div class="admin-sheet-list">${VIEWS.map(([key,name,glyph]) => `<button data-admin="tab" data-tab="${key}" class="${key === tab ? 'is-selected' : ''}">${icon(glyph)}<span>${name}</span>${key === tab ? icon('check') : ''}</button>`).join('')}</div>`);
+        else if (kind === 'mobile-nav') showDialog('Yao 選單', `<div class="admin-sheet-list">${[...document.querySelectorAll('#nav [data-page]')].map(n => `<button data-admin="navigate" data-page="${e(n.dataset.page)}"><span>${e([...n.childNodes].filter(c => c.nodeType === Node.TEXT_NODE).map(c => c.textContent).join('').trim())}</span></button>`).join('')}<button data-admin="quick-note">${icon('edit')}<span>快速記一下</span></button><button data-admin="logout"><span>登出</span></button></div>`);
+        else if (kind === 'mobile-filters') showDialog('篩選工作', `<form id="adminMobileFilterForm"><label>工作狀態<select name="status"><option value="">全部狀態</option>${options(STATUSES,statusFilter)}</select></label><label>提交對象<select name="recipient"><option value="">全部對象</option>${options(RECIPIENTS,recipientFilter)}</select></label><div class="modal-actions"><button type="button" class="btn" data-admin="clear-filters">清除</button><button type="submit" class="btn primary">套用</button></div></form>`);
+    }
+    function rowActions(id) {
+        const task = tasks.find(t => t.id === id && !t.archived);
+        if (!task) return;
+        dialogKind = 'row-actions'; dialogId = id;
+        const reviewAction = task.isSubmission && task.reviewStatus !== '核定' ? `<button data-admin="${task.reviewStatus === '審查中' ? 'review' : 'submit'}" data-id="${e(id)}">${icon('file')}<span>${task.reviewStatus === '審查中' ? '記錄審查結果' : '登記送審'}</span></button>` : '';
+        showDialog(task.title, `<p class="admin-sheet-caption">${pretty(task.date)} · ${e(task.recipient)}</p><div class="admin-sheet-status" role="group" aria-label="更新工作狀態">${allowedStatuses(task).map(status => `<button data-admin="set-status" data-id="${e(id)}" data-status="${e(status)}" class="${status === task.status ? 'is-selected' : ''}" ${busy ? 'disabled' : ''}>${e(status)}${status === task.status ? icon('check') : ''}</button>`).join('')}</div><div class="admin-sheet-list">${reviewAction}<button data-admin="detail" data-id="${e(id)}">${icon('file')}<span>查看完整內容</span></button><button data-admin="edit" data-id="${e(id)}">${icon('edit')}<span>編輯工作</span></button></div>`);
+    }
     function showDialog(title, body, footer = '') {
         if (overlay.classList.contains('hidden')) {
             returnFocus = document.activeElement;
             returnSelector = returnFocus?.dataset.id ? `[data-admin="detail"][data-id="${CSS.escape(returnFocus.dataset.id)}"]` : '';
         }
         dialogEpoch = epoch;
+        dialog.classList.toggle('admin-menu-sheet', dialogKind.startsWith('mobile-') || dialogKind === 'row-actions');
         dialog.innerHTML = `<div class="modal-head"><h2 id="adminDialogTitle">${e(title)}</h2><button class="icon-btn" type="button" data-admin="close" aria-label="關閉">×</button></div>${body}${footer}<div class="admin-dialog-error" role="alert"></div>`;
         overlay.classList.remove('hidden');
+        fitDialog();
         document.body.classList.add('admin-modal-open');
         (dialog.querySelector('[name="title"]') || dialog.querySelector('input:not([type="hidden"]), textarea, select') || dialog.querySelector('button'))?.focus();
     }
     function closeDialog() {
+        if (overlay.classList.contains('hidden')) return;
         if (busy && dialogEpoch === epoch) return;
         overlay.classList.add('hidden');
         document.body.classList.remove('admin-modal-open');
         dialogKind = ''; dialogId = '';
         if (returnFocus?.isConnected) returnFocus.focus({preventScroll:true});
-        else if (isActive()) (app.querySelector(returnSelector || '.admin-tabs button.active') || app.querySelector('.admin-tabs button.active'))?.focus({preventScroll:true});
+        else if (isActive()) ((returnSelector ? app.querySelector(returnSelector) : null) || app.querySelector(window.matchMedia('(max-width:768px)').matches ? '.admin-mobile-context button' : '.admin-tabs button.active'))?.focus({preventScroll:true});
     }
     function openNew({date = tab === 'calendar' ? selectedDate : todayISO(), recurring = false, submission = false, title = '', note = '', project: targetProject = '', recipient = quickDraft.recipient} = {}) {
         if (!getUser()) return;
@@ -289,15 +326,17 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
     }
     function taskForm(task, defaults = {}) {
         dialogKind = task ? 'edit' : 'new'; dialogId = task?.id || '';
+        const compact = window.matchMedia('(max-width:768px)').matches;
+        const extras = `${task ? '' : `<label>工作類型<select name="kind"><option value="normal">一般行政</option><option value="submission" ${defaults.submission ? 'selected' : ''}>送審文件・保留版次</option></select></label>`}<label>準備內容／備註 <span class="muted">選填</span><textarea name="note" rows="3" maxlength="4000" placeholder="要準備哪些資料、交付方式、聯絡事項…">${e(task?.note || defaults.note || '')}</textarea></label>${compact && !task ? '<label class="admin-again-option"><input type="checkbox" name="again" value="true">儲存後繼續新增</label>' : ''}`;
         showDialog(task ? '編輯行政事項' : '新增行政事項', `<form id="adminForm">
             ${task?.recurringId ? '<div class="admin-info">只調整這一次工作。要調整之後的週期，請至「固定排程」。</div>' : ''}
             <label>事項名稱<input name="title" maxlength="160" required value="${e(task?.title || defaults.title || '')}" placeholder="例如：人員名冊更新"></label>
             <label>案場<select name="projectId" required>${projectOptions(task?.projectId || defaults.projectId)}</select></label>
             <div class="form-grid"><label>截止日期<input name="date" type="date" required value="${e(task?.date || defaults.date || todayISO())}" min="2000-01-01" max="2100-12-31"></label><label>提交對象<select name="recipient">${options(RECIPIENTS,task?.recipient || defaults.recipient || '監造')}</select></label></div>
             <div class="admin-date-presets"><button type="button" data-admin="form-date" data-days="0">今天</button><button type="button" data-admin="form-date" data-days="1">明天</button><button type="button" data-admin="form-date" data-days="7">一週後</button></div>
-            ${task ? '' : `<fieldset class="admin-schedule-choice"><legend>多久做一次</legend>${[['once','單次'],['weekly','每週固定'],['monthly','每月固定']].map(([key,label]) => `<label><input type="radio" name="schedule" value="${key}" ${key === (defaults.recurring === true ? 'monthly' : defaults.recurring || 'once') ? 'checked' : ''}><span>${label}</span></label>`).join('')}</fieldset><div id="adminSchedulePreview" class="admin-schedule-preview"></div><label>工作類型<select name="kind"><option value="normal">一般行政</option><option value="submission" ${defaults.submission ? 'selected' : ''}>送審文件・保留版次</option></select></label>`}
-            <label>準備內容／備註 <span class="muted">選填</span><textarea name="note" rows="3" maxlength="4000" placeholder="要準備哪些資料、交付方式、聯絡事項…">${e(task?.note || defaults.note || '')}</textarea></label>
-            <div class="modal-actions"><button class="btn" type="button" data-admin="close">取消</button>${task ? '' : '<button class="btn" type="submit" data-again="true">儲存並再新增</button>'}<button class="btn primary" type="submit">${task ? '儲存修改' : '新增事項'}</button></div></form>`);
+            ${task ? '' : `<fieldset class="admin-schedule-choice"><legend>多久做一次</legend>${[['once','單次'],['weekly','每週固定'],['monthly','每月固定']].map(([key,label]) => `<label><input type="radio" name="schedule" value="${key}" ${key === (defaults.recurring === true ? 'monthly' : defaults.recurring || 'once') ? 'checked' : ''}><span>${label}</span></label>`).join('')}</fieldset><div id="adminSchedulePreview" class="admin-schedule-preview"></div>`}
+            ${compact ? `<details class="admin-form-extra" ${defaults.submission || task?.note || defaults.note ? 'open' : ''}><summary>備註${task ? '' : '與送審設定'}</summary>${extras}</details>` : extras}
+            <div class="modal-actions"><button class="btn" type="button" data-admin="close">取消</button>${task || compact ? '' : '<button class="btn" type="submit" data-again="true">儲存並再新增</button>'}<button class="btn primary" type="submit">${task ? '儲存修改' : '新增工作'}</button></div></form>`);
         updateSchedulePreview();
     }
     function updateSchedulePreview() {
@@ -305,6 +344,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         if (!node) return;
         const date = dialog.querySelector('[name="date"]').value, schedule = dialog.querySelector('[name="schedule"]:checked')?.value;
         if (!date || Number.isNaN(new Date(`${date}T00:00:00Z`).getTime())) { node.textContent = '先選日期，再安排週期。'; return; }
+        node.classList.toggle('is-once',schedule === 'once');
         if (schedule === 'once') { node.textContent = `${pretty(date)}・只安排這一次`; return; }
         const dates = schedule === 'weekly' ? [date,shiftDate(date,7),shiftDate(date,14)] : [date,...[1,2].map(n => occurrenceDate(shiftMonth(date.slice(0,7),n),Number(date.slice(8))))];
         const label = schedule === 'weekly' ? `每週${WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()]}` : `每月 ${Number(date.slice(8))} 日`;
@@ -356,8 +396,8 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             await work(currentStore);
             if (token !== epoch) return;
             busy = false;
-            toast('行政資料已儲存');
             next?.();
+            if (!notice) toast('行政資料已儲存');
         } catch (err) {
             if (token !== epoch) return;
             busy = false;
@@ -385,15 +425,21 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         if (!button || (!app.contains(button) && !overlay.contains(button)) || !isActive() || busy) return;
         const action = button.dataset.admin, id = button.dataset.id;
         if (action === 'close') closeDialog();
-        else if (action === 'tab') { tab = button.dataset.tab; statusFilter = ''; recipientFilter = ''; filter = 'all'; render(); }
-        else if (action === 'project') setProject(button.dataset.project);
+        else if (['mobile-projects','mobile-views','mobile-nav','mobile-filters'].includes(action)) mobileMenu(action);
+        else if (action === 'mobile-search' || action === 'mobile-search-clear') { const search = document.querySelector('#searchInput'); mobileSearchOpen = action !== 'mobile-search-clear' && !mobileSearchOpen && !getSearch().trim(); if (!mobileSearchOpen && search) search.value = ''; render(); if (mobileSearchOpen) document.querySelector('#adminMobileSearch')?.focus(); }
+        else if (action === 'row-actions') rowActions(id);
+        else if (action === 'set-status') { await updateStatus(id,button.dataset.status); if (!dialog.querySelector('.admin-dialog-error')?.textContent) closeDialog(); }
+        else if (action === 'navigate') { closeDialog(); [...document.querySelectorAll('#nav [data-page]')].find(n => n.dataset.page === button.dataset.page)?.click(); }
+        else if (action === 'quick-note' || action === 'logout') { closeDialog(); document.querySelector(action === 'quick-note' ? '#mobileQuickNoteBtn' : '#logoutBtn')?.click(); }
+        else if (action === 'tab') { closeDialog(); tab = button.dataset.tab; statusFilter = ''; recipientFilter = ''; filter = 'all'; render(); }
+        else if (action === 'project') { closeDialog(); setProject(button.dataset.project); }
         else if (action === 'range') { range = button.dataset.range; filter = 'all'; render(); }
         else if (action === 'filter') { filter = button.dataset.filter; if (filter === 'all') range = 'near'; render(); }
         else if (action === 'week-day') { selectedDate = button.dataset.date; filter = 'date'; render(); }
         else if (action === 'month') { month = shiftMonth(month,Number(button.dataset.step)); selectedDate = `${month}-01`; render(); }
         else if (action === 'date') { selectedDate = button.dataset.date; render(); }
         else if (action === 'today') { selectedDate = todayISO(); month = selectedDate.slice(0,7); render(); }
-        else if (action === 'clear-filters') { statusFilter = ''; recipientFilter = ''; const search = document.querySelector('#searchInput'); if (search) search.value = ''; render(); }
+        else if (action === 'clear-filters') { statusFilter = ''; recipientFilter = ''; const search = document.querySelector('#searchInput'); if (search) search.value = ''; closeDialog(); render(); }
         else if (action === 'new' || action === 'new-review' || action === 'new-recurring') openNew({date:button.dataset.date || todayISO(), submission:action === 'new-review', recurring:action === 'new-recurring' ? 'weekly' : false});
         else if (action === 'quick-more') openNew({title:quickDraft.title,date:quickDraft.date,project:quickDraft.projectId});
         else if (action === 'preset') openNew({title:button.dataset.title,recurring:['weekly','monthly'].includes(button.dataset.kind) ? button.dataset.kind : false,submission:button.dataset.kind === 'submission'});
@@ -419,12 +465,15 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
     app.addEventListener('click',click);
     overlay.addEventListener('click',event => { if (event.target === overlay) closeDialog(); else click(event); });
     app.addEventListener('input',event => {
+        if (event.target.id === 'adminMobileSearch') { const search = document.querySelector('#searchInput'); if (search) search.value = event.target.value; if (!event.isComposing) render(); }
         if (event.target.id === 'adminQuickTitle') quickDraft.title = event.target.value;
         if (event.target.id === 'adminQuickDate') quickDraft.date = event.target.value;
         if (event.target.id === 'adminQuickProject') quickDraft.projectId = event.target.value;
         if (event.target.id === 'adminQuickRecipient') quickDraft.recipient = event.target.value;
     });
+    app.addEventListener('compositionend',event => { if (event.target.id === 'adminMobileSearch') render(); });
     app.addEventListener('change',async event => {
+        if (event.target.id === 'adminMobileRange') { const value = event.target.value; if (['today','week','overdue','waiting','date'].includes(value)) filter = value; else { range = value; filter = 'all'; } render(); return; }
         if (event.target.dataset.taskStatus) { await updateStatus(event.target.dataset.taskStatus,event.target.value); return; }
         if (event.target.id === 'adminProject') { setProject(event.target.value); return; }
         else if (event.target.id === 'adminStatusFilter') statusFilter = event.target.value;
@@ -452,8 +501,9 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         event.preventDefault();
         if (dialogEpoch !== epoch || busy) return;
         const data = Object.fromEntries(new FormData(event.target));
+        if (event.target.id === 'adminMobileFilterForm') { statusFilter = data.status; recipientFilter = data.recipient; closeDialog(); render(); return; }
         if (typeof data.title === 'string') data.title = data.title.trim();
-        const id = dialogId, kind = dialogKind, again = event.submitter?.dataset.again === 'true';
+        const id = dialogId, kind = dialogKind, again = event.submitter?.dataset.again === 'true' || data.again === 'true';
         if (['new','edit','template'].includes(kind) && event.target.id !== 'adminStatusForm' && !getProjects().some(p => p.id === data.projectId && (!p.archived || p.id === tasks.find(t => t.id === id)?.projectId || p.id === templates.find(t => t.id === id)?.projectId))) { dialog.querySelector('.admin-dialog-error').textContent = '請選擇使用中的案場。'; return; }
         await perform(async s => {
             if (event.target.id === 'adminStatusForm') await s.mutate(id,'status',data);

@@ -208,6 +208,11 @@ body.admin-modal-open .mobile-quick-note { display:none; }
 .admin-save-notice { display:flex; gap:10px; align-items:center; padding:12px 16px; border:1px solid #cfe4d8; border-radius:10px; background:#f1f9f4; color:#287c63; font-size:13px; }
 .admin-save-notice > span { flex:1; overflow-wrap:anywhere; }
 .admin-save-notice button { border:0; padding:6px; background:transparent; color:#287c63; font:inherit; cursor:pointer; white-space:nowrap; }
+.admin-save-notice.is-pending { background:#f3f6fa; border-color:#dce3ed; color:#5c6b82; }
+.admin-save-notice.is-error { background:#fff3f1; border-color:#edccc7; color:#af493c; }
+.admin-save-notice.is-error button { color:inherit; }
+.admin-status-sync { color:#78859a; font-size:10px; font-weight:400; white-space:nowrap; }
+.admin-mobile-status .admin-status-sync { margin-left:5px; padding-left:5px; border-left:1px solid currentColor; }
 .admin-recurring-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
 .admin-recurring-card { border:1px solid var(--yao-border); border-radius:14px; padding:22px; background:white; }
 .admin-recurring-card.is-paused { background:#fafbfc; }

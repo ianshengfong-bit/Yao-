@@ -9,7 +9,11 @@ export function createAdminStore(db, uid) {
     return {
         subscribe(onTasks, onTemplates, onError) {
             const stops = [
-                onSnapshot(tasks, snap => onTasks(snap.docs.map(d => ({...d.data(), id:d.id}))), onError),
+                onSnapshot(tasks, {includeMetadataChanges:true}, snap => {
+                    // An unconfirmed local write must not become the rollback
+                    // baseline. The metadata event delivers it after approval.
+                    if (!snap.metadata.hasPendingWrites) onTasks(snap.docs.map(d => ({...d.data(), id:d.id})));
+                }, onError),
                 onSnapshot(templates, snap => onTemplates(snap.docs.map(d => ({...d.data(), id:d.id}))), onError)
             ];
             return () => stops.forEach(stop => stop());
@@ -46,12 +50,19 @@ export function createAdminStore(db, uid) {
         },
         async mutate(id, action, payload = {}) {
             const ref = doc(tasks, id);
-            await runTransaction(db, async tx => {
+            return runTransaction(db, async tx => {
                 const snap = await tx.get(ref);
                 if (!snap.exists()) throw new Error('事項已不存在，請重新整理。');
                 const task = snap.data();
                 if (task.archived && action !== 'restore') throw new Error('請先恢復封存事項。');
-                tx.update(ref, changeTask(task, action, payload, uid));
+                if (action === 'status' && payload.expectedStatus !== undefined && task.status !== payload.expectedStatus) {
+                    throw new Error('這件工作的進度已在其他地方變更，請查看最新狀態。');
+                }
+                // Another device may have made the same change during the wait.
+                if (action === 'status' && task.status === payload.status) return {task:{...task,id}, previousStatus:task.status};
+                const patch = changeTask(task, action, payload, uid);
+                tx.update(ref, patch);
+                return {task:{...task,...patch,id}, previousStatus:task.status};
             });
         },
         async editTemplate(id, data) {

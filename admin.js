@@ -1,4 +1,6 @@
-import {STATUSES, RECIPIENTS, WEEKDAYS, todayISO, shiftMonth, shiftDate, occurrenceDate, urgency, summary, weekRange, frequencyOf, recurrenceLabel, taskWindow} from './admin-core.js';
+import {STATUSES, RECIPIENTS, WEEKDAYS, todayISO, shiftMonth, shiftDate, occurrenceDate, urgency, summary, weekRange, frequencyOf, recurrenceLabel, taskWindow, changeTask} from './admin-core.js';
+import {createStatusUpdates} from './admin-status.js';
+import {updateAdminDOM} from './admin-dom.js';
 
 const escapeHTML = (value = '') => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 const e = escapeHTML;
@@ -26,6 +28,19 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
     overlay.innerHTML = '<div class="modal admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminDialogTitle" tabindex="-1"></div>';
     document.body.append(overlay);
     const dialog = overlay.firstElementChild;
+    const statusUpdates = createStatusUpdates({
+        save: (id,status,expectedStatus) => store.mutate(id,'status',{status,...(expectedStatus === undefined ? {} : {expectedStatus})}),
+        validate: (task,status) => changeTask(task,'status',{status},uid),
+        onChange() { tasks = statusUpdates.tasks(); updateBadge(); if (isActive()) render(); },
+        onSaved({id,task,status,previousStatus,context}) {
+            if (notice?.error && notice.id !== id) return;
+            notice = {text:context.undo ? '已撤銷剛才的進度變更' : `${task.title} · ${status}`,
+                ...(!context.undo && previousStatus !== status ? {undo:{id,previous:previousStatus,expected:status}} : {})};
+        },
+        onError({id,status,context,error}) {
+            notice = {id,error:true, text:friendlyError(error,'未儲存，已恢復最新資料'), ...(!context.undo ? {retry:{id,status}} : {})};
+        }
+    });
     function fitDialog() {
         if (overlay.classList.contains('hidden')) return;
         const viewport = window.visualViewport;
@@ -68,12 +83,13 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         const allowed = allowedStatuses(task), u = urgency(task);
         const mobileDate = task.date === todayISO() ? '今天到期' : `${pretty(task.date).slice(5)} 週${WEEKDAYS[new Date(`${task.date}T00:00:00Z`).getUTCDay()]}`;
         const mobileState = task.isSubmission ? ({'退件':'returned','審查中':'reviewing','核定':'approved'}[task.reviewStatus] || STATUSES.indexOf(task.status)) : STATUSES.indexOf(task.status);
-        const mobileMeta = `<span class="admin-row-mobile-meta"><span class="admin-mobile-due admin-${u.level}">${icon('calendar')}${e(mobileDate)}${!done && task.date !== todayISO() && ['overdue','soon','week'].includes(u.level) ? `<em>${e(u.label)}</em>` : ''}</span><span class="admin-mobile-status admin-state-${mobileState}">${e(task.isSubmission ? task.reviewStatus : task.status)}${task.isSubmission && task.submissions?.length ? ` V${task.submissions.at(-1).version}` : ''}</span><span class="admin-mobile-recipient">送交 ${e(task.recipient)}</span>${cadence ? `<span class="admin-mobile-cadence" aria-label="${cadence}" title="${cadence}">${icon('repeat')}${cadence.replace('固定','')}</span>` : ''}</span>`;
+        const syncing = statusUpdates.has(task.id) ? '<small class="admin-status-sync" role="status">儲存中</small>' : '';
+        const mobileMeta = `<span class="admin-row-mobile-meta"><span class="admin-mobile-due admin-${u.level}">${icon('calendar')}${e(mobileDate)}${!done && task.date !== todayISO() && ['overdue','soon','week'].includes(u.level) ? `<em>${e(u.label)}</em>` : ''}</span><span class="admin-mobile-status admin-state-${mobileState}">${e(task.isSubmission ? task.reviewStatus : task.status)}${task.isSubmission && task.submissions?.length ? ` V${task.submissions.at(-1).version}` : ''}${syncing}</span><span class="admin-mobile-recipient">送交 ${e(task.recipient)}</span>${cadence ? `<span class="admin-mobile-cadence" aria-label="${cadence}" title="${cadence}">${icon('repeat')}${cadence.replace('固定','')}</span>` : ''}</span>`;
         return `<article class="admin-task-row ${done ? 'is-done' : ''} admin-task-${u.level}" data-task-id="${e(task.id)}">
             <button class="admin-complete ${done ? 'is-checked' : ''}" data-admin="${task.isSubmission ? 'detail' : done ? 'reopen' : 'complete'}" data-id="${e(task.id)}" aria-label="${task.isSubmission ? '查看送審' : done ? '重新開啟' : '完成'}：${e(task.title)}" ${busy ? 'disabled' : ''}>${done ? icon('check') : task.isSubmission ? icon('file') : ''}</button>
             <button type="button" class="admin-row-main" data-admin="detail" data-id="${e(task.id)}"><strong>${e(task.title)}</strong><span class="admin-row-desktop-meta">${projectId === 'all' ? `<span class="admin-project-tag">${e(projectName(task.projectId))}</span>` : ''}${e(task.recipient)}${cadence ? ` <span class="admin-recurring-tag">${icon('repeat')}${cadence}</span>` : ''}${task.isSubmission ? ` · ${e(task.reviewStatus)}${task.submissions?.length ? ` V${task.submissions.at(-1).version}` : ''}` : ''}</span>${mobileMeta}${projectId === 'all' ? `<span class="admin-mobile-task-project">${e(projectName(task.projectId))}</span>` : ''}</button>
             <div class="admin-row-deadline"><span>${e(pretty(task.date).slice(5))} 週${WEEKDAYS[new Date(`${task.date}T00:00:00Z`).getUTCDay()]}</span>${badge(task)}</div>
-            <div class="admin-row-actions"><select class="admin-inline-status" data-task-status="${e(task.id)}" aria-label="${e(task.title)}的工作狀態" ${busy ? 'disabled' : ''}>${options(allowed,task.status)}</select>${task.isSubmission && action ? `<button class="btn admin-row-review" data-admin="${action}" data-id="${e(task.id)}" ${busy ? 'disabled' : ''}>${action === 'submit' ? '登記送審' : '記錄結果'}</button>` : ''}<button class="admin-edit-button" data-admin="edit" data-id="${e(task.id)}" aria-label="編輯：${e(task.title)}">${icon('edit')}</button></div><button class="admin-mobile-row-more" data-admin="row-actions" data-id="${e(task.id)}" aria-label="操作：${e(task.title)}">${mobileIcon('dots')}</button></article>`;
+            <div class="admin-row-actions"><select class="admin-inline-status" data-task-status="${e(task.id)}" aria-label="${e(task.title)}的工作狀態" ${busy ? 'disabled' : ''}>${options(allowed,task.status)}</select>${syncing}${task.isSubmission && action ? `<button class="btn admin-row-review" data-admin="${action}" data-id="${e(task.id)}" ${busy ? 'disabled' : ''}>${action === 'submit' ? '登記送審' : '記錄結果'}</button>` : ''}<button class="admin-edit-button" data-admin="edit" data-id="${e(task.id)}" aria-label="編輯：${e(task.title)}">${icon('edit')}</button></div><button class="admin-mobile-row-more" data-admin="row-actions" data-id="${e(task.id)}" aria-label="操作：${e(task.title)}">${mobileIcon('dots')}</button></article>`;
     }
     function taskList(list, empty = '這裡目前沒有事項。') {
         return list.length ? `<div class="admin-task-list">${[...list].sort((a,b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title)).map(row).join('')}</div>` : `<div class="admin-empty">${e(empty)}</div>`;
@@ -123,7 +139,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         const refresh = () => { updateBadge(); if (isActive()) render(); };
         stop = store.subscribe(list => {
             if (token !== epoch) return;
-            tasks = list; tasksReady = true; refresh();
+            statusUpdates.receive(list); tasks = statusUpdates.tasks(); tasksReady = true; refresh();
             if (generationRequested) scheduleGeneration();
         }, list => {
             if (token !== epoch) return;
@@ -143,6 +159,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
     }
     function reset() {
         epoch++;
+        statusUpdates.reset();
         stop?.(); stop = null; uid = null; store = null;
         tasks = []; templates = []; tasksReady = false; templatesReady = false;
         error = ''; generationError = ''; generating = false; generationRequested = false;
@@ -192,7 +209,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             if (!groups.has(key)) groups.set(key,[]);
             groups.get(key).push(task);
         }
-        return [...groups].map(([label,rows]) => `<section class="admin-task-group"><div class="admin-group-title ${label.startsWith('逾期') ? 'admin-overdue' : ''}"><h3>${label}</h3><span>${rows.length} 件</span></div>${taskList(rows)}</section>`).join('');
+        return [...groups].map(([label,rows]) => `<section class="admin-task-group" data-dom-key="group:${e(label)}"><div class="admin-group-title ${label.startsWith('逾期') ? 'admin-overdue' : ''}"><h3>${label}</h3><span>${rows.length} 件</span></div>${taskList(rows)}</section>`).join('');
     }
     function overview(all) {
         const today = todayISO(), s = summary(all), [start,end] = weekRange(today);
@@ -251,6 +268,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         const moreProjects = getProjects().some(p => p.archived) || activeProjects.length > 6;
         const projectSelect = `<div class="admin-project-bar"><div class="admin-project-chips" role="group" aria-label="選擇案場">${[{id:'all',name:'全部案場'},...activeProjects].map(p => `<button class="${projectId === p.id ? 'active' : ''}" data-admin="project" data-project="${e(p.id)}" aria-pressed="${projectId === p.id}">${e(p.name)}${due(p.id) ? `<span>${due(p.id)}</span>` : ''}</button>`).join('')}</div>${moreProjects ? `<select id="adminProject" aria-label="更多案場"><option value="all">全部案場</option>${getProjects().map(p => `<option value="${e(p.id)}" ${p.id === projectId ? 'selected' : ''}>${e(p.name)}${p.archived ? '（已封存）' : ''}</option>`).join('')}</select>` : ''}</div>`;
         let content;
+        const saveNotice = notice?.error ? notice : statusUpdates.count() ? {pending:true,text:statusUpdates.count() > 1 ? `正在儲存 ${statusUpdates.count()} 件工作的進度…` : '正在儲存工作進度…'} : notice;
         if (error) content = `<section class="card admin-error" role="alert"><h3>行政資料尚未就緒</h3><p>${e(error)}</p><button class="btn" data-admin="retry">重新連線</button></section>`;
         else if (!tasksReady || !templatesReady) content = '<section class="card admin-empty" role="status">正在載入行政資料…</section>';
         else if (!getProjects().length) content = `<section class="card admin-empty"><h3>先建立一個案場</h3><p>工作會依案場整理，之後可以隨時切換。</p><button class="btn primary" data-admin="new-project">＋ 新增案場</button></section>`;
@@ -260,16 +278,16 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             content = `<div class="admin-tabs" role="group" aria-label="行政視圖">${[['overview','工作台','grid'],['calendar','月曆','calendar'],['reviews','送審追蹤','file'],['recurring','固定排程','repeat'],['history','歷程','clock']].map(([key,name,glyph]) => `<button class="${tab === key ? 'active' : ''}" data-admin="tab" data-tab="${key}" aria-pressed="${tab === key}">${icon(glyph)}${name}</button>`).join('')}</div>
                 ${project?.archived ? '<div class="admin-info">此案場已封存，固定事項暫停產生。仍可查看与處理已有行政紀錄。</div>' : ''}
                 ${generationError ? `<div class="admin-error" role="alert">${e(generationError)} <button class="btn" data-admin="generate">重試排程</button></div>` : ''}
-                ${notice ? `<div class="admin-save-notice" role="status">${icon('check')}<span>${e(notice.text)}</span>${notice.undo ? '<button data-admin="undo">撤銷</button>' : ''}<button data-admin="dismiss-notice" aria-label="關閉儲存提示">×</button></div>` : ''}
+                ${saveNotice ? `<div class="admin-save-notice ${saveNotice.error ? 'is-error' : saveNotice.pending ? 'is-pending' : ''}" role="${saveNotice.error ? 'alert' : 'status'}">${icon(saveNotice.error ? 'repeat' : saveNotice.pending ? 'clock' : 'check')}<span title="${e(saveNotice.text)}">${e(saveNotice.text)}</span>${saveNotice.retry ? '<button data-admin="retry-status">重試</button>' : saveNotice.undo ? '<button data-admin="undo">撤銷</button>' : ''}${saveNotice.pending ? '' : '<button data-admin="dismiss-notice" aria-label="關閉儲存提示">×</button>'}</div>` : ''}
                 ${view}`;
         }
         const focused = app.contains(document.activeElement) ? document.activeElement : null;
         const focusId = focused?.id, selection = focused?.tagName === 'INPUT' && ['text','search'].includes(focused.type) ? [focused.selectionStart,focused.selectionEnd] : null;
         const focusedStatus = focused?.dataset.taskStatus;
         const projectScroll = app.querySelector('.admin-project-chips')?.scrollLeft || 0;
-        app.innerHTML = `<div class="admin-page">${mobileChrome()}<div class="admin-heading"><span class="admin-eyebrow">${pretty(todayISO())} · 星期${WEEKDAYS[new Date(`${todayISO()}T00:00:00Z`).getUTCDay()]}</span><p>${getSearch().trim() ? `搜尋「${e(getSearch().trim())}」` : '先看近期工作，再安排下一步。'}</p></div>${projectSelect}${content}</div>`;
-        if (focusId) { const replacement = document.getElementById(focusId); replacement?.focus({preventScroll:true}); if (selection) replacement?.setSelectionRange(...selection); }
-        else if (focusedStatus) app.querySelector(`[data-task-status="${CSS.escape(focusedStatus)}"]`)?.focus({preventScroll:true});
+        updateAdminDOM(app, `<div class="admin-page">${mobileChrome()}<div class="admin-heading"><span class="admin-eyebrow">${pretty(todayISO())} · 星期${WEEKDAYS[new Date(`${todayISO()}T00:00:00Z`).getUTCDay()]}</span><p>${getSearch().trim() ? `搜尋「${e(getSearch().trim())}」` : '先看近期工作，再安排下一步。'}</p></div>${projectSelect}${content}</div>`);
+        if (focused && !focused.isConnected && focusId) { const replacement = document.getElementById(focusId); replacement?.focus({preventScroll:true}); if (selection) replacement?.setSelectionRange(...selection); }
+        else if (focused && !focused.isConnected && focusedStatus) app.querySelector(`[data-task-status="${CSS.escape(focusedStatus)}"]`)?.focus({preventScroll:true});
         const chips = app.querySelector('.admin-project-chips'), activeChip = chips?.querySelector('.active');
         if (chips && activeChip) {
             chips.scrollLeft = projectScroll;
@@ -370,7 +388,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             <dl class="admin-detail-fields"><div><dt>案場</dt><dd>${e(projectName(task.projectId))}</dd></div><div><dt>截止日期</dt><dd>${pretty(task.date)}</dd></div><div><dt>TG 提醒</dt><dd>${task.time ? `${e(task.time)}${task.reminderAtTime === false ? ' · 只提前提醒' : ' · 到時通知'}` : '早上總覽'}</dd></div><div><dt>提交對象</dt><dd>${e(task.recipient)}</dd></div><div><dt>工作狀態</dt><dd>${e(task.status)}</dd></div>${task.isSubmission ? `<div><dt>送審結果</dt><dd>${e(task.reviewStatus)}</dd></div>` : ''}</dl>
             <div class="admin-status-track">${STATUSES.map(s => `<span class="${s === task.status ? 'active' : ''}">${s}</span>`).join('<span aria-hidden="true">›</span>')}</div>
             <h3>準備內容／備註</h3><p class="admin-note">${e(task.note || '尚未填寫')}</p>
-            ${!task.archived ? `<form id="adminStatusForm"><label>更新工作狀態<select name="status">${options(STATUSES,task.status)}</select></label><button class="btn primary" type="submit">更新狀態</button></form>` : ''}
+            ${!task.archived ? `<form id="adminStatusForm"><label>更新工作狀態<select name="status">${options(allowedStatuses(task),task.status)}</select></label><button class="btn primary" type="submit">更新狀態</button></form>` : ''}
             ${task.isSubmission ? `<div class="admin-submission-panel"><div class="admin-section-head"><h3>送審版次</h3>${!task.archived ? (task.reviewStatus === '審查中' ? `<button class="btn primary" data-admin="review" data-id="${e(id)}">記錄審查結果</button>` : task.reviewStatus !== '核定' ? `<button class="btn primary" data-admin="submit" data-id="${e(id)}">${task.reviewStatus === '退件' ? '登記下一版送審' : '登記送審'}</button>` : '') : ''}</div>${rounds ? `<ol class="admin-rounds">${rounds}</ol>` : '<p class="muted">尚未送出。按「登記送審」建立 V1；此操作只記錄送出狀態。</p>'}</div>` : ''}
             <details class="admin-task-history"><summary>事項歷程（${(task.history || []).length} 筆）</summary><ol class="admin-rounds">${[...(task.history || [])].reverse().map(h => `<li><strong>${e(h.action)}</strong><small> ${e(timestamp(h.at))}</small><p>${e(h.detail)}</p></li>`).join('')}</ol></details>
             <div class="modal-actions">${controls}<button class="btn" data-admin="close">關閉</button></div>`);
@@ -423,23 +441,30 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
             }
         }
     }
-    async function updateStatus(id, status) {
-        const task = tasks.find(t => t.id === id && !t.archived);
-        if (!task || task.status === status) return;
-        const previous = task.status;
-        await perform(s => s.mutate(id,'status',{status}), () => {
-            notice = {text:`${task.title} · ${status}`,undo:{id,previous,expected:status}};
-        });
+    function updateStatus(id, status, context = {}) {
+        if (busy || !store || uid !== getUser()?.uid) return false;
+        try {
+            if (!notice?.error || notice.id === id) notice = null;
+            if (!statusUpdates.request(id,status,context)) render();
+            return true;
+        } catch (err) {
+            const message = friendlyError(err,'狀態未變更');
+            if (!overlay.classList.contains('hidden')) dialog.querySelector('.admin-dialog-error').textContent = message;
+            else toast(message);
+            render();
+            return false;
+        }
     }
     async function click(event) {
         const button = event.target.closest('[data-admin]');
         if (!button || (!app.contains(button) && !overlay.contains(button)) || !isActive() || busy) return;
         const action = button.dataset.admin, id = button.dataset.id;
+        if (['edit','submit','review','archive','restore'].includes(action) && statusUpdates.has(id)) { toast('這件工作的進度正在儲存，請稍候再編輯內容。'); return; }
         if (action === 'close') closeDialog();
         else if (['mobile-projects','mobile-views','mobile-nav','mobile-filters'].includes(action)) mobileMenu(action);
         else if (action === 'mobile-search' || action === 'mobile-search-clear') { const search = document.querySelector('#searchInput'); mobileSearchOpen = action !== 'mobile-search-clear' && !mobileSearchOpen && !getSearch().trim(); if (!mobileSearchOpen && search) search.value = ''; render(); if (mobileSearchOpen) document.querySelector('#adminMobileSearch')?.focus(); }
         else if (action === 'row-actions') rowActions(id);
-        else if (action === 'set-status') { await updateStatus(id,button.dataset.status); if (!dialog.querySelector('.admin-dialog-error')?.textContent) closeDialog(); }
+        else if (action === 'set-status') { if (updateStatus(id,button.dataset.status)) closeDialog(); }
         else if (action === 'navigate') { closeDialog(); [...document.querySelectorAll('#nav [data-page]')].find(n => n.dataset.page === button.dataset.page)?.click(); }
         else if (action === 'quick-note' || action === 'logout') { closeDialog(); document.querySelector(action === 'quick-note' ? '#mobileQuickNoteBtn' : '#logoutBtn')?.click(); }
         else if (action === 'tab') { closeDialog(); tab = button.dataset.tab; statusFilter = ''; recipientFilter = ''; filter = 'all'; render(); }
@@ -457,9 +482,10 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         else if (action === 'complete' || action === 'reopen') await updateStatus(id,action === 'complete' ? '已完成' : '待準備');
         else if (action === 'undo') {
             const undo = notice?.undo, task = tasks.find(t => t.id === undo?.id);
-            if (!undo || !task || task.archived || task.status !== undo.expected) { notice = null; toast('這件工作的進度已變更，請查看最新狀態。'); render(); }
-            else await perform(s => s.mutate(undo.id,'status',{status:undo.previous}),() => { notice = {text:'已撤銷剛才的進度變更'}; });
+            if (!undo || !task || task.archived || statusUpdates.has(task.id) || task.status !== undo.expected) { notice = null; toast('這件工作的進度已變更，請查看最新狀態。'); render(); }
+            else updateStatus(undo.id,undo.previous,{undo:true,expectedStatus:undo.expected});
         }
+        else if (action === 'retry-status') { const retry = notice?.retry; if (retry) updateStatus(retry.id,retry.status); }
         else if (action === 'dismiss-notice') { notice = null; render(); }
         else if (action === 'form-date') { dialog.querySelector('[name="date"]').value = shiftDate(todayISO(),Number(button.dataset.days)); updateSchedulePreview(); }
         else if (action === 'new-project') openProject();
@@ -516,10 +542,11 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         if (typeof data.title === 'string') data.title = data.title.trim();
         if (['new','edit','template'].includes(dialogKind) && event.target.id !== 'adminStatusForm') {data.reminderAtTime = data.reminderAtTime === 'true'; data.reminderOneHour = data.reminderOneHour === 'true';}
         const id = dialogId, kind = dialogKind, again = event.submitter?.dataset.again === 'true' || data.again === 'true';
+        if (event.target.id === 'adminStatusForm') { if (updateStatus(id,data.status)) closeDialog(); return; }
+        if (kind !== 'template' && statusUpdates.has(id)) { dialog.querySelector('.admin-dialog-error').textContent = '這件工作的進度正在儲存，請稍候再編輯內容。'; return; }
         if (['new','edit','template'].includes(kind) && event.target.id !== 'adminStatusForm' && !getProjects().some(p => p.id === data.projectId && (!p.archived || p.id === tasks.find(t => t.id === id)?.projectId || p.id === templates.find(t => t.id === id)?.projectId))) { dialog.querySelector('.admin-dialog-error').textContent = '請選擇使用中的案場。'; return; }
         await perform(async s => {
-            if (event.target.id === 'adminStatusForm') await s.mutate(id,'status',data);
-            else if (kind === 'new') await s.create({projectId:data.projectId, title:data.title, date:data.date, time:data.time || '', reminder:data.reminder || 'none', reminderAtTime:data.reminderAtTime, reminderOneHour:data.reminderOneHour, recipient:data.recipient, note:data.note, status:'待準備', isSubmission:data.kind === 'submission'},data.schedule === 'once' ? false : data.schedule);
+            if (kind === 'new') await s.create({projectId:data.projectId, title:data.title, date:data.date, time:data.time || '', reminder:data.reminder || 'none', reminderAtTime:data.reminderAtTime, reminderOneHour:data.reminderOneHour, recipient:data.recipient, note:data.note, status:'待準備', isSubmission:data.kind === 'submission'},data.schedule === 'once' ? false : data.schedule);
             else if (kind === 'edit') await s.mutate(id,'edit',data);
             else if (kind === 'template') await s.editTemplate(id,data);
             else if (kind === 'submit' || kind === 'review') await s.mutate(id,kind,data);

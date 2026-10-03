@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-v16-all-tg-reminders";
+const CACHE_NAME = "yao-v17-admin-status";
 
 const FILES_TO_CACHE = [
     "./",
@@ -6,6 +6,8 @@ const FILES_TO_CACHE = [
     "./style.css",
     "./app.js",
     "./admin.js",
+    "./admin-status.js",
+    "./admin-dom.js",
     "./admin-core.js",
     "./reminder-core.js",
     "./admin-store.js",

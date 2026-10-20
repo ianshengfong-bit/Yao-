@@ -7,7 +7,7 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     >
 
     <meta
@@ -17,10 +17,10 @@
 
     <meta
         name="description"
-        content="Yao 消防工程行政管理系統"
+        content="YAO 消防工程行政管理系統"
     >
 
-    <title>Yao｜消防工程行政管理</title>
+    <title>YAO｜消防工程行政管理</title>
 
     <link
         rel="stylesheet"
@@ -28,6 +28,7 @@
     >
 
     <link rel="stylesheet" href="./admin.css">
+    <link rel="stylesheet" href="./workspace.css">
 
     <link
         rel="manifest"
@@ -56,7 +57,7 @@
         </div>
 
         <h1>
-            Yao
+            YAO
         </h1>
 
         <p class="login-subtitle">
@@ -118,7 +119,7 @@
 
 
 <!-- =====================================================
-     Yao 系統
+     YAO 系統
 ===================================================== -->
 
 <div
@@ -144,7 +145,7 @@
             <div>
 
                 <strong>
-                    Yao
+                    YAO
                 </strong>
 
                 <span>
@@ -172,7 +173,7 @@
                 class="nav-item active"
                 data-page="dashboard"
             >
-                🏠 儀表板
+                🏠 總覽
             </button>
 
 
@@ -273,7 +274,7 @@
 
 
             <small>
-                Yao · Firebase
+                YAO · Firebase
             </small>
 
 
@@ -306,7 +307,7 @@
 
 
                 <h1 id="pageTitle">
-                    儀表板
+                    總覽
                 </h1>
 
             </div>
@@ -885,13 +886,14 @@
 
 
 <!-- =====================================================
-     Firebase / Yao
+     Firebase / YAO
 ===================================================== -->
 
 <script
     type="module"
     src="./app.js"
 ></script>
+<script type="module" src="./workspace.js"></script>
 
 
 
@@ -914,7 +916,7 @@ if ("serviceWorker" in navigator) {
                     registration => {
 
                         console.log(
-                            "Yao Service Worker 已啟用"
+                            "YAO Service Worker 已啟用"
                         );
 
                         setInterval(

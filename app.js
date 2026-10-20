@@ -1631,6 +1631,8 @@ function filteredItems() {
 
 function render() {
 
+    window.dispatchEvent(new Event('yao:before-render'));
+
     updateInboxNavCount();
 
 
@@ -1674,7 +1676,7 @@ function render() {
     const titles = {
 
         dashboard:
-            "儀表板",
+            "總覽",
 
         administration:
             "行政",
@@ -1814,13 +1816,7 @@ function render() {
         currentPage ===
         "records"
     ) {
-        renderListPage(
-            data.filter(
-                x =>
-                    x.type === "紀錄"
-            ),
-            "工作紀錄"
-        );
+        renderListPage(data, "工作紀錄");
     }
 
 
@@ -1839,6 +1835,7 @@ function render() {
         renderReminders();
     }
 
+    window.dispatchEvent(new Event('yao:rendered'));
 }
 
 
@@ -7032,6 +7029,7 @@ if (itemForm) {
 
 
                 closeItemModal();
+                window.dispatchEvent(new Event('yao:item-saved'));
 
             }
 
@@ -7683,3 +7681,11 @@ console.log(
 console.log(
     "========================================"
 );
+
+// Read-only snapshots for the workspace; writes continue through the existing forms.
+window.YaoWorkspace = Object.freeze({
+    listProjects: () => currentUser ? projects.map(p => ({...p})) : [],
+    listItems: (filtered = false) => currentUser ? (filtered ? filteredItems() : items).map(i => ({...i})) : [],
+    ready: () => Boolean(currentUser && dataReady)
+});
+window.dispatchEvent(new Event('yao:rendered'));

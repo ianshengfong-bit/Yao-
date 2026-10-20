@@ -1,10 +1,13 @@
-const CACHE_NAME = "yao-v17-admin-status";
+const CACHE_NAME = "yao-workspace-20261020-1";
 
 const FILES_TO_CACHE = [
     "./",
     "./index.html",
     "./style.css",
     "./app.js",
+    "./workspace.js",
+    "./workspace.css",
+    "./smart-entry.js",
     "./admin.js",
     "./admin-status.js",
     "./admin-dom.js",
@@ -60,7 +63,7 @@ self.addEventListener("activate", event => {
                     cacheNames
                         .filter(
                             name =>
-                                name !== CACHE_NAME
+                                name.startsWith("yao-") && name !== CACHE_NAME
                         )
                         .map(
                             name =>
@@ -93,6 +96,8 @@ self.addEventListener("fetch", event => {
         return;
     }
 
+
+    if (new URL(event.request.url).origin !== self.location.origin) return;
 
     event.respondWith(
 

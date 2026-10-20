@@ -133,6 +133,7 @@ const administration = createAdministration({
 ========================================================= */
 
 let calendarDate = new Date();
+let selectedCalendarDay = "";
 
 calendarDate.setDate(1);
 
@@ -1977,6 +1978,15 @@ function setMobileQuickNoteVisibility(hidden) {
 }
 
 
+function fitQuickNoteViewport() {
+    const viewport = window.visualViewport;
+    document.documentElement.style.setProperty('--quick-note-top', `${viewport?.offsetTop || 0}px`);
+    document.documentElement.style.setProperty('--quick-note-height', `${viewport?.height || window.innerHeight}px`);
+}
+window.visualViewport?.addEventListener('resize', fitQuickNoteViewport);
+window.visualViewport?.addEventListener('scroll', fitQuickNoteViewport);
+window.addEventListener('resize', fitQuickNoteViewport);
+
 function openInboxModal() {
 
     const modal =
@@ -1991,6 +2001,7 @@ function openInboxModal() {
     if (form)
         form.reset();
 
+    fitQuickNoteViewport();
     setMobileQuickNoteVisibility(true);
 
     modal.classList.remove("hidden");
@@ -4093,9 +4104,8 @@ function goCalendarToday() {
 
     calendarDate.setDate(1);
 
-    renderCalendar(
-        filteredItems()
-    );
+    selectedCalendarDay = isoToday;
+    renderCalendar(filteredItems());
 
 }
 
@@ -4115,6 +4125,21 @@ function renderCalendar(data) {
 
     const monthTitle =
         `${year} 年 ${month + 1} 月`;
+
+    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+    if (!selectedCalendarDay.startsWith(monthPrefix + "-")) {
+        selectedCalendarDay = isoToday.startsWith(monthPrefix + "-") ? isoToday : `${monthPrefix}-01`;
+    }
+    const dayItems = data.filter(item => item.date === selectedCalendarDay)
+        .sort((a,b) => (a.time || "").localeCompare(b.time || ""));
+    const selected = new Date(`${selectedCalendarDay}T12:00:00`);
+    const agendaRows = dayItems.map(item => `
+        <button type="button" class="calendar-agenda-item ${item.done ? 'is-done' : ''}" data-calendar-edit="${esc(item.id)}">
+            <time>${esc(item.time || "全天")}</time>
+            <span><strong>${esc(item.title)}</strong><small>${esc(getProject(item.projectId)?.name || "未指定案場")} · ${esc(item.type)}${item.done ? ' · 已完成' : ''}</small></span>
+            <span aria-hidden="true">↗</span>
+        </button>`).join("");
+
 
 
     const firstDay =
@@ -4264,6 +4289,7 @@ function renderCalendar(data) {
                 class="
                     day
                     ${isToday ? "today" : ""}
+                    ${date === selectedCalendarDay ? "is-selected" : ""}
                 "
             >
 
@@ -4296,6 +4322,11 @@ function renderCalendar(data) {
                 </div>
 
 
+                <button type="button" class="calendar-date-button" data-calendar-date="${date}"
+                    aria-label="${month + 1}月${day}日，${events.length}件工作" aria-pressed="${date === selectedCalendarDay}"
+                    ${isToday ? 'aria-current="date"' : ''}>
+                    <span>${day}</span><small>${events.length ? `${events.length} 件` : '　'}</small>
+                </button>
                 <div class="day-events">
 
                     ${
@@ -4446,7 +4477,9 @@ function renderCalendar(data) {
                 </div>
 
 
+                <div class="calendar-actions">
                 <button
+                    type="button"
                     class="
                         btn
                         calendar-today-btn
@@ -4454,10 +4487,11 @@ function renderCalendar(data) {
                     onclick="goCalendarToday()"
                 >
 
-                    📍 今天
+                    今天
 
                 </button>
-
+                <button type="button" class="btn calendar-note-btn" onclick="openInboxModal()">＋ 記一下</button>
+                </div>
             </div>
 
 
@@ -4472,6 +4506,10 @@ function renderCalendar(data) {
             </div>
 
 
+            <section class="calendar-agenda" aria-label="當日工作">
+                <header><div><h3>${month + 1} 月 ${selected.getDate()} 日 <small>週${"日一二三四五六"[selected.getDay()]}</small></h3><span>${dayItems.length} 件工作</span></div><button type="button" class="btn" data-calendar-add>＋ 工作</button></header>
+                ${agendaRows || '<p class="calendar-agenda-empty">這天尚未安排工作</p>'}
+            </section>
             <div class="calendar-hint">
 
                 <span>
@@ -4479,7 +4517,7 @@ function renderCalendar(data) {
                 </span>
 
                 <span>
-                    共 ${data.length} 筆資料
+                    本月 ${data.filter(item => item.date?.startsWith(monthPrefix + "-")).length} 筆工作
                 </span>
 
             </div>
@@ -4488,6 +4526,20 @@ function renderCalendar(data) {
 
     `;
 
+    app.querySelector('.calendar-page').addEventListener('click', event => {
+        const dateButton = event.target.closest('[data-calendar-date]');
+        const editButton = event.target.closest('[data-calendar-edit]');
+        if (dateButton) {
+            selectedCalendarDay = dateButton.dataset.calendarDate;
+            renderCalendar(filteredItems());
+            app.querySelector(`[data-calendar-date="${selectedCalendarDay}"]`)?.focus({preventScroll:true});
+        }
+        if (editButton) editItem(editButton.dataset.calendarEdit);
+        if (event.target.closest('[data-calendar-add]')) {
+            openItemModal();
+            document.getElementById('itemDate').value = selectedCalendarDay;
+        }
+    });
 }
 
 

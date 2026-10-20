@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-workspace-20261020-1";
+const CACHE_NAME = "yao-workspace-20261020-2";
 
 const FILES_TO_CACHE = [
     "./",

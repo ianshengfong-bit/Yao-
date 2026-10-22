@@ -1,20 +1,20 @@
-const CACHE_NAME = "yao-workspace-20261022-jade-1";
+const CACHE_NAME = "yao-workspace-20261022-jade-2";
 
 const FILES_TO_CACHE = [
     "./",
     "./index.html",
     "./style.css",
-    "./app.js",
-    "./workspace.js",
+    "./app.js?v=20261022-jade-2",
+    "./workspace.js?v=20261022-jade-2",
     "./workspace.css",
-    "./workspace-refresh.css",
+    "./workspace-refresh.css?v=20261022-jade-2",
     "./capture-date.js",
     "./capture-plan.js",
     "./capture-store.js",
     "./capture-view.js",
     "./field-views.js",
     "./smart-entry.js",
-    "./admin.js",
+    "./admin.js?v=20261022-jade-2",
     "./admin-status.js",
     "./admin-dom.js",
     "./admin-core.js",

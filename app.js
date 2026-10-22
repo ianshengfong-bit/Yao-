@@ -41,7 +41,7 @@ import {capturePlan} from './capture-plan.js';
 import {createCaptureOnce} from './capture-store.js';
 import {fieldList,projectSummaryCard} from './field-views.js';
 
-import {createAdministration} from "./admin.js";
+import {createAdministration} from "./admin.js?v=20261022-jade-2";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-workspace-20261020-2";
+const CACHE_NAME = "yao-workspace-20261022-jade-1";
 
 const FILES_TO_CACHE = [
     "./",
@@ -7,6 +7,12 @@ const FILES_TO_CACHE = [
     "./app.js",
     "./workspace.js",
     "./workspace.css",
+    "./workspace-refresh.css",
+    "./capture-date.js",
+    "./capture-plan.js",
+    "./capture-store.js",
+    "./capture-view.js",
+    "./field-views.js",
     "./smart-entry.js",
     "./admin.js",
     "./admin-status.js",
@@ -153,3 +159,4 @@ self.addEventListener("fetch", event => {
     );
 
 });
+

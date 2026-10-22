@@ -37,6 +37,10 @@ import {
     initializeApp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
+import {capturePlan} from './capture-plan.js';
+import {createCaptureOnce} from './capture-store.js';
+import {fieldList,projectSummaryCard} from './field-views.js';
+
 import {createAdministration} from "./admin.js";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
@@ -55,6 +59,7 @@ import {
     collection,
     doc,
     addDoc,
+    runTransaction,
     updateDoc,
     deleteDoc,
     onSnapshot
@@ -1443,7 +1448,7 @@ async function startRealtimeData() {
 
         // V5.3.2：待整理資料一有變化，立即刷新目前畫面
         // Dashboard／待整理頁直接更新，不必切換分頁
-        if (currentPage === "dashboard" || currentPage === "inbox") {
+        if (currentPage === "dashboard" || currentPage === "inbox" || currentPage === "records") {
             render();
         } else {
             updateInboxNavCount?.();
@@ -1701,7 +1706,7 @@ function render() {
             "工作紀錄",
 
         inbox:
-            "待整理",
+            "隨手記",
 
         reminders:
             "提醒中心"
@@ -1903,9 +1908,9 @@ function renderInbox() {
     app.innerHTML = `
         <div class="inbox-toolbar">
             <div>
-                <h2>📥 待整理</h2>
+                <h2>隨手記</h2>
                 <div class="muted">
-                    臨時想到的事情先放這裡，有空再整理成正式工作。
+                    原文先留下，需要交辦時再整理成正式工作。
                 </div>
             </div>
 
@@ -1988,6 +1993,8 @@ window.visualViewport?.addEventListener('scroll', fitQuickNoteViewport);
 window.addEventListener('resize', fitQuickNoteViewport);
 
 function openInboxModal() {
+    if (currentPage === 'administration') { administration.openNew(); return; }
+
 
     const modal =
         document.querySelector("#inboxModal");
@@ -2085,6 +2092,18 @@ function organizeInboxNote(id) {
     pendingInboxNoteId = String(note.id);
 
     openItemModal(null, null, note.text || "");
+
+    if (note.captureSource === 'quick') {
+        const set = (id,value) => { const field=document.getElementById(id); if(field) field.value=value; };
+        set('itemProject',note.projectId || '');
+        set('itemDate',note.date || '');
+        set('itemTime',note.time || '');
+        set('itemType',note.type || '紀錄');
+        set('itemReminder','none');
+        set('itemNote',note.reminderRequest ? '提醒要求（尚未設定）：'+note.reminderRequest : '');
+        document.getElementById('itemOneHourReminder').checked=false;
+        document.getElementById('itemAtTimeReminder').checked=false;
+    }
 
 }
 
@@ -2499,178 +2518,22 @@ function itemRow(item) {
 一般列表
 ========================================================= */
 
-function renderListPage(
-    data,
-    title
-) {
-
-    /*
-     * 一般列表也統一採用「進行中 / 已結束」分類。
-     * 不修改資料結構，直接使用現有的 item.done。
-     * 這樣進料／出貨、人員安排、查驗、工作紀錄
-     * 都會和案場內的工作分類保持一致。
-     */
-
-    const activeItems =
-        [...data]
-            .filter(
-                item =>
-                    item.done !== true
-            )
-            .sort(
-                (a, b) =>
-                    `${a.date || ""} ${a.time || ""}`
-                    .localeCompare(
-                        `${b.date || ""} ${b.time || ""}`
-                    )
-            );
-
-
-    const completedItems =
-        [...data]
-            .filter(
-                item =>
-                    item.done === true
-            )
-            .sort(
-                (a, b) =>
-                    `${b.date || ""} ${b.time || ""}`
-                    .localeCompare(
-                        `${a.date || ""} ${a.time || ""}`
-                    )
-            );
-
-
-    const activeHTML =
-        activeItems.length
-        ?
-        activeItems
-            .map(itemRow)
-            .join("")
-        :
-        `
-        <div class="empty">
-            目前沒有進行中的資料
-        </div>
-        `;
-
-
-    const completedHTML =
-        completedItems.length
-        ?
-        `
-        <details
-            style="
-                margin-top:16px;
-                border:1px solid #e5e7eb;
-                border-radius:14px;
-                background:#fafafa;
-                overflow:hidden;
-            "
-        >
-
-            <summary
-                style="
-                    cursor:pointer;
-                    padding:16px 18px;
-                    font-weight:700;
-                    color:#374151;
-                    list-style-position:inside;
-                    user-select:none;
-                "
-            >
-                ✅ 已結束
-                <span
-                    style="
-                        display:inline-flex;
-                        align-items:center;
-                        justify-content:center;
-                        min-width:28px;
-                        height:24px;
-                        padding:0 8px;
-                        margin-left:8px;
-                        border-radius:12px;
-                        background:#e5e7eb;
-                        font-size:13px;
-                        font-weight:600;
-                    "
-                >
-                    ${completedItems.length}
-                </span>
-            </summary>
-
-            <div
-                class="list"
-                style="
-                    padding:0 10px 10px;
-                    border-top:1px solid #e5e7eb;
-                "
-            >
-                ${completedItems.map(itemRow).join("")}
-            </div>
-
-        </details>
-        `
-        :
-        "";
-
-
-    app.innerHTML = `
-
-        <div class="project-toolbar">
-
-            <div>
-
-                <div class="muted">
-
-                    ${title}
-
-                    共 ${data.length} 筆
-
-                </div>
-
-                <div
-                    class="muted"
-                    style="margin-top:4px;"
-                >
-                    進行中 ${activeItems.length} 筆
-                    ｜
-                    已結束 ${completedItems.length} 筆
-                </div>
-
-            </div>
-
-
-            <button
-                class="btn primary"
-                onclick="openItemModal()"
-            >
-                ＋ 新增
-            </button>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="list">
-
-                ${activeHTML}
-
-            </div>
-
-            ${completedHTML}
-
-        </div>
-
-    `;
-
+let fieldListFilter = 'recent';
+function renderListPage(data,title) {
+    const query=String(document.getElementById('searchInput')?.value||'').trim().toLowerCase();
+    const notes=currentPage==='records'?inboxNotes.filter(n=>[n.text,n.date,getProject(n.projectId)?.name].join(' ').toLowerCase().includes(query)).map(n=>({...n,title:n.text,sourceNote:true,captureKind:n.captureKind||'note'})):[];
+    const rows=[...data,...notes];
+    const noteRow=n=>`<article class="list-row compact-item-row"><div class="list-main compact-item-main"><strong>${esc(n.text)}</strong><span class="compact-item-meta">${esc(getProject(n.projectId)?.name||'未指定案場')} · ${esc(n.date||'未排日期')} · ${n.captureKind==='task'?(n.done?'已完成':'待辦・尚未排入正式工作'):'隨手記'}</span>${n.reminderRequest?'<span class="field-reminder-request">提醒要求已保留；通知尚未設定。</span>':''}</div><div class="field-note-actions"><button type="button" class="mini-btn" data-note-organize="${esc(n.id)}">整理成工作</button>${n.captureKind==='task'?'<button type="button" class="mini-btn" data-note-done="'+esc(n.id)+'">'+(n.done?'恢復':'完成')+'</button>':''}</div></article>`;
+    app.innerHTML = fieldList(rows,title,r=>r.sourceNote?noteRow(r):itemRow(r),fieldListFilter);
+    app.querySelectorAll('[data-field-list]').forEach(button => button.addEventListener('click', () => {
+        fieldListFilter = button.dataset.fieldList;
+        renderListPage(data,title);
+        app.querySelector('[data-field-list="'+fieldListFilter+'"]')?.focus({preventScroll:true});
+    }));
+    app.querySelectorAll('[data-note-organize]').forEach(b=>b.addEventListener('click',()=>organizeInboxNote(b.dataset.noteOrganize)));
+    app.querySelectorAll('[data-note-done]').forEach(b=>b.addEventListener('click',async()=>{b.disabled=true;try{await toggleCaptureNote(b.dataset.noteDone)}catch(error){toast(error.message||'更新失敗')}finally{if(b.isConnected)b.disabled=false}}));
 }
 
-
-/* =========================================================
-案場頁
-========================================================= */
 
 function renderProjects() {
 
@@ -2775,183 +2638,17 @@ function renderProjects() {
 案場卡片
 ========================================================= */
 
-function projectCard(project) {
+function projectCard(project) { return projectSummaryCard(project,items,isoToday); }
 
-    const projectItems =
-        items.filter(
-            x =>
-                String(x.projectId) ===
-                String(project.id)
-        );
+app.addEventListener('click', event => {
+    const button=event.target.closest('[data-project-open],[data-project-edit],[data-project-archive],[data-project-delete]');
+    if (!button) return;
+    if (button.dataset.projectOpen) viewProject(button.dataset.projectOpen);
+    else if (button.dataset.projectEdit) editProject(button.dataset.projectEdit);
+    else if (button.dataset.projectArchive) toggleArchive(button.dataset.projectArchive);
+    else if (button.dataset.projectDelete) deleteProject(button.dataset.projectDelete);
+});
 
-
-    const done =
-        projectItems.filter(
-            x =>
-                x.done
-        ).length;
-
-
-    const percent =
-        projectItems.length
-        ?
-        done /
-        projectItems.length *
-        100
-        :
-        0;
-
-
-    return `
-
-        <div
-            class="
-                project-card
-                ${project.archived ? "archived" : ""}
-            "
-        >
-
-            <div class="project-head">
-
-                <div>
-
-                    <div class="project-code">
-                        ${esc(project.code)}
-                    </div>
-
-                    <h3>
-                        ${esc(project.name)}
-                    </h3>
-
-                </div>
-
-
-                <span
-                    class="
-                        tag
-                        ${project.archived
-                            ? "gray"
-                            : "green"}
-                    "
-                >
-
-                    ${
-                        project.archived
-                        ?
-                        "已封存"
-                        :
-                        "進行中"
-                    }
-
-                </span>
-
-            </div>
-
-
-            <div class="project-info">
-
-                📍
-                ${esc(project.address || "尚未填寫")}
-
-                <br>
-
-                👤
-                ${esc(project.contact || "尚未填寫")}
-
-                ${
-                    project.phone
-                    ?
-                    "｜" +
-                    esc(project.phone)
-                    :
-                    ""
-                }
-
-                <br>
-
-                📝
-                ${esc(project.note || "無備註")}
-
-            </div>
-
-
-            <div class="progress">
-
-                <div
-                    style="
-                        width:${percent}%
-                    "
-                ></div>
-
-            </div>
-
-
-            <div class="muted">
-
-                ${projectItems.length}
-                筆工作
-
-                ・
-
-                ${done}
-                筆完成
-
-            </div>
-
-
-            <div class="project-actions">
-
-                <button
-                    class="mini-btn"
-                    onclick="viewProject('${project.id}')"
-                >
-                    查看
-                </button>
-
-
-                <button
-                    class="mini-btn"
-                    onclick="editProject('${project.id}')"
-                >
-                    ✏️ 編輯
-                </button>
-
-
-                <button
-                    class="mini-btn archive"
-                    onclick="toggleArchive('${project.id}')"
-                >
-
-                    ${
-                        project.archived
-                        ?
-                        "恢復"
-                        :
-                        "封存"
-                    }
-
-                </button>
-
-
-                <button
-                    class="mini-btn delete"
-                    onclick="deleteProject('${project.id}')"
-                >
-                    🗑️
-                </button>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-查看案場
-========================================================= */
 
 function viewProject(id) {
 
@@ -7062,14 +6759,21 @@ if (itemForm) {
 
                 else {
 
-                    await addDoc(
-                        userCollection("items"),
-                        data
-                    );
-
-
-                    if (pendingInboxNoteId) {
-                        await removePendingInboxNoteAfterSave();
+                    const sourceNote=inboxNotes.find(n=>String(n.id)===String(pendingInboxNoteId));
+                    if (sourceNote?.captureSource==='quick') {
+                        const sourceId=String(pendingInboxNoteId);
+                        const target=doc(userCollection('items'),'converted-'+sourceId);
+                        const source=doc(userCollection('inboxNotes'),sourceId);
+                        await runTransaction(db,async tx=>{
+                            const existing=await tx.get(target),original=await tx.get(source);
+                            if(!existing.exists()&&!original.exists())throw new Error('這筆原文已變更，請重新整理。');
+                            if(!existing.exists())tx.set(target,{...data,createdAt:Date.now(),sourceCaptureId:sourceId,originalText:original.data().text,reminderRequest:original.data().reminderRequest||''});
+                            tx.delete(source);
+                        });
+                        pendingInboxNoteId=null;
+                    } else {
+                        await addDoc(userCollection('items'),data);
+                        if(pendingInboxNoteId)await removePendingInboxNoteAfterSave();
                     }
 
 
@@ -7734,10 +7438,32 @@ console.log(
     "========================================"
 );
 
-// Read-only snapshots for the workspace; writes continue through the existing forms.
+// Field capture only writes existing user-scoped field collections.
+// Administrative tasks and recurring templates remain exclusively in admin-store.js.
+async function saveFieldCapture(text,options = {}) {
+    if (!currentUser || !dataReady) throw new Error('請等待登入與資料載入完成。');
+    if (currentPage === 'administration') throw new Error('請在行政工作台新增行政事項。');
+    const requestId = String(options.requestId || '');
+    if (!/^[A-Za-z0-9-]{8,90}$/.test(requestId)) throw new Error('儲存編號無效，請重新操作。');
+    const plan=capturePlan(text,projects,options);
+    const uid=currentUser.uid;
+    const ref=doc(db,'users',uid,plan.collection,'quick-'+requestId);
+    const convertedRef=plan.collection==='inboxNotes'?doc(db,'users',uid,'items','converted-quick-'+requestId):null;
+    await createCaptureOnce(runTransaction,db,ref,plan.data,convertedRef);
+    return {id:'quick-'+requestId,collection:plan.collection,parsed:plan.parsed};
+}
+async function toggleCaptureNote(id) {
+    if (!currentUser || currentPage === 'administration') return;
+    const note=inboxNotes.find(n=>String(n.id)===String(id));
+    if (!note || note.captureKind!=='task') return;
+    await updateDoc(doc(db,'users',currentUser.uid,'inboxNotes',String(id)),{done:!note.done});
+}
 window.YaoWorkspace = Object.freeze({
     listProjects: () => currentUser ? projects.map(p => ({...p})) : [],
     listItems: (filtered = false) => currentUser ? (filtered ? filteredItems() : items).map(i => ({...i})) : [],
+    listNotes: () => currentUser ? inboxNotes.map(n=>({...n})) : [],
+    capture:saveFieldCapture,
+    toggleNote:toggleCaptureNote,
     ready: () => Boolean(currentUser && dataReady)
 });
 window.dispatchEvent(new Event('yao:rendered'));

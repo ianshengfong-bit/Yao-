@@ -1,4 +1,4 @@
-const CACHE_NAME = "yao-workspace-20261022-jade-2";
+const CACHE_NAME = "yao-workspace-20261022-jade-3";
 
 const FILES_TO_CACHE = [
     "./",
@@ -7,7 +7,7 @@ const FILES_TO_CACHE = [
     "./app.js?v=20261022-jade-2",
     "./workspace.js?v=20261022-jade-2",
     "./workspace.css",
-    "./workspace-refresh.css?v=20261022-jade-2",
+    "./workspace-refresh.css?v=20261022-jade-3",
     "./capture-date.js",
     "./capture-plan.js",
     "./capture-store.js",

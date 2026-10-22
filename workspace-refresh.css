@@ -152,3 +152,7 @@ body.yao-next-field .field-record-list .mobile-item-actions{display:flex!importa
 body.yao-next-field .field-note-actions{display:flex;gap:8px;flex-wrap:wrap}
 body.yao-next.next-compact .field-nav-label{display:none}
 body.yao-next.next-compact .next-nav-divider{font-size:0}
+/* The native page header already names the list and provides its add action. */
+body.yao-next-field .field-list-heading{display:block;margin:-5px 0 12px}
+body.yao-next-field .field-list-heading h2,body.yao-next-field .field-list-heading .field-eyebrow,body.yao-next-field .field-list-heading>.btn{display:none}
+@media(max-width:380px){.admin-modal .form-grid,.field-adjust{grid-template-columns:minmax(0,1fr)}}

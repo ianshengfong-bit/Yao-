@@ -156,3 +156,14 @@ body.yao-next.next-compact .next-nav-divider{font-size:0}
 body.yao-next-field .field-list-heading{display:block;margin:-5px 0 12px}
 body.yao-next-field .field-list-heading h2,body.yao-next-field .field-list-heading .field-eyebrow,body.yao-next-field .field-list-heading>.btn{display:none}
 @media(max-width:380px){.admin-modal .form-grid,.field-adjust{grid-template-columns:minmax(0,1fr)}}
+
+/* One-tap completion: the done action is the first, filled button on every record. */
+body.yao-next-field .field-note-card>footer{align-items:center}
+body.yao-next-field .field-note-card>footer button.field-done-btn,body.yao-next-field #system .field-note-actions .field-done-btn{background:var(--next-accent);color:var(--field-on);text-decoration:none;border:1px solid var(--next-accent);border-radius:999px;padding:0 18px;min-height:40px;font-size:14px;font-weight:600;letter-spacing:.04em}
+body.yao-next-field .field-note-card>footer button.field-done-btn:hover{filter:brightness(1.08)}
+body.yao-next-field .field-note-card>footer button.field-done-btn.is-done,body.yao-next-field #system .field-note-actions .field-done-btn.is-done{background:transparent;color:var(--next-muted);border-color:var(--next-line);font-weight:500}
+.field-note-card.is-done>header>span:first-child{color:var(--next-accent);font-weight:600}
+.field-note-card.is-done p{text-decoration:line-through;text-decoration-color:var(--next-line)}
+@media(max-width:760px){
+body.yao-next-field .field-note-card>footer button.field-done-btn{min-height:46px;padding:0 22px;font-size:15px}
+}

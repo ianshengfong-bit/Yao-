@@ -39,7 +39,7 @@ import {
 
 import {capturePlan} from './capture-plan.js';
 import {createCaptureOnce} from './capture-store.js';
-import {fieldList,projectSummaryCard} from './field-views.js';
+import {fieldList,projectSummaryCard,rowCard,showUndo} from './field-views.js';
 
 import {createAdministration} from "./admin.js?v=20261022-jade-2";
 import {createAdminStore} from "./admin-store.js";
@@ -2460,7 +2460,7 @@ function itemRow(item) {
                 </span>
 
                 <button
-                    class="mini-btn mobile-done-btn"
+                    class="mini-btn mobile-done-btn${item.done ? " is-done" : ""}"
                     onclick="toggleDone('${item.id}')"
                 >
                     ${
@@ -2518,20 +2518,46 @@ function itemRow(item) {
 一般列表
 ========================================================= */
 
-let fieldListFilter = 'recent';
+// 工作紀錄／進料出貨／人員／查驗：和工務首頁同樣的兩行卡片。
+// 左邊圓圈或往右滑完成；點卡片展開編輯、分享、刪除。
+let fieldListFilter = 'all';
+let fieldListLimit = 30;
+const fieldListOpen = new Set();
 function renderListPage(data,title) {
     const query=String(document.getElementById('searchInput')?.value||'').trim().toLowerCase();
     const notes=currentPage==='records'?inboxNotes.filter(n=>[n.text,n.date,getProject(n.projectId)?.name].join(' ').toLowerCase().includes(query)).map(n=>({...n,title:n.text,sourceNote:true,captureKind:n.captureKind||'note'})):[];
     const rows=[...data,...notes];
-    const noteRow=n=>`<article class="list-row compact-item-row"><div class="list-main compact-item-main"><strong>${esc(n.text)}</strong><span class="compact-item-meta">${esc(getProject(n.projectId)?.name||'未指定案場')} · ${esc(n.date||'未排日期')} · ${n.captureKind==='task'?(n.done?'已完成':'待辦・尚未排入正式工作'):'隨手記'}</span>${n.reminderRequest?'<span class="field-reminder-request">提醒要求已保留；通知尚未設定。</span>':''}</div><div class="field-note-actions"><button type="button" class="mini-btn" data-note-organize="${esc(n.id)}">整理成工作</button>${n.captureKind==='task'?'<button type="button" class="mini-btn" data-note-done="'+esc(n.id)+'">'+(n.done?'恢復':'完成')+'</button>':''}</div></article>`;
-    app.innerHTML = fieldList(rows,title,r=>r.sourceNote?noteRow(r):itemRow(r),fieldListFilter);
+    const listRow=r=>{
+        const id=esc(r.id),key=(r.sourceNote?'note:':'item:')+r.id;
+        const actions=r.sourceNote
+            ?`<button type="button" data-note-organize="${id}">整理成工作</button><button type="button" data-row-copy="${esc(key)}">複製文字</button>`
+            :`<button type="button" onclick="editItem('${id}')">編輯</button><button type="button" onclick="shareItem('${id}')">分享</button><button type="button" class="danger" onclick="deleteItem('${id}')">刪除</button>`;
+        return rowCard(r,{key,project:getProject(r.projectId)?.name||'',kind:r.sourceNote?(r.captureKind==='task'?'待辦':'隨手記'):r.type,open:fieldListOpen.has(key),expandAttr:'data-row-expand',check:r.sourceNote?`data-note-done="${id}"`:`data-row-done="${id}"`,actions});
+    };
+    app.innerHTML = fieldList(rows,title,listRow,fieldListFilter,{limit:fieldListLimit});
+    const rerender=()=>renderListPage(data,title);
     app.querySelectorAll('[data-field-list]').forEach(button => button.addEventListener('click', () => {
         fieldListFilter = button.dataset.fieldList;
-        renderListPage(data,title);
+        fieldListLimit = 30;
+        rerender();
         app.querySelector('[data-field-list="'+fieldListFilter+'"]')?.focus({preventScroll:true});
     }));
+    app.querySelector('[data-field-more]')?.addEventListener('click',()=>{fieldListLimit+=30;rerender()});
+    app.querySelectorAll('[data-row-expand]').forEach(body=>{
+        const toggle=()=>{const k=body.dataset.rowExpand;fieldListOpen.has(k)?fieldListOpen.delete(k):fieldListOpen.add(k);rerender();app.querySelector(`[data-row-expand="${CSS.escape(k)}"]`)?.focus({preventScroll:true})};
+        body.addEventListener('click',ev=>{if(!ev.target.closest('button'))toggle()});
+        body.addEventListener('keydown',ev=>{if(ev.target===body&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();toggle()}});
+    });
+    app.querySelectorAll('[data-row-done]').forEach(b=>b.addEventListener('click',async()=>{
+        const item=items.find(x=>String(x.id)===b.dataset.rowDone);b.disabled=true;
+        try{await toggleDone(b.dataset.rowDone,{quiet:true});if(item&&!item.done)showUndo(item.title,()=>toggleDone(item.id,{quiet:true}))}finally{if(b.isConnected)b.disabled=false}
+    }));
+    app.querySelectorAll('[data-row-copy]').forEach(b=>b.addEventListener('click',async()=>{const r=rows.find(r=>'note:'+r.id===b.dataset.rowCopy);if(!r)return;try{await navigator.clipboard.writeText(r.title);b.textContent='已複製'}catch{b.textContent='請長按原文複製'}}));
     app.querySelectorAll('[data-note-organize]').forEach(b=>b.addEventListener('click',()=>organizeInboxNote(b.dataset.noteOrganize)));
-    app.querySelectorAll('[data-note-done]').forEach(b=>b.addEventListener('click',async()=>{b.disabled=true;try{await toggleCaptureNote(b.dataset.noteDone)}catch(error){toast(error.message||'更新失敗')}finally{if(b.isConnected)b.disabled=false}}));
+    app.querySelectorAll('[data-note-done]').forEach(b=>b.addEventListener('click',async()=>{
+        const note=inboxNotes.find(n=>String(n.id)===b.dataset.noteDone);b.disabled=true;
+        try{await toggleCaptureNote(b.dataset.noteDone);if(note&&!note.done)showUndo(note.text,()=>toggleCaptureNote(note.id).catch(error=>toast(error.message||'復原失敗')))}catch(error){toast(error.message||'更新失敗')}finally{if(b.isConnected)b.disabled=false}
+    }));
 }
 
 
@@ -3483,7 +3509,7 @@ async function deleteItem(id) {
 完成 / 恢復
 ========================================================= */
 
-async function toggleDone(id) {
+async function toggleDone(id, options = {}) {
 
     const item =
         items.find(
@@ -3514,13 +3540,15 @@ async function toggleDone(id) {
         );
 
 
-        toast(
-            item.done
-            ?
-            "已恢復"
-            :
-            "已完成"
-        );
+        // 工務列表自己顯示「復原」列，不再重複跳提示。
+        if (!options.quiet)
+            toast(
+                item.done
+                ?
+                "已恢復"
+                :
+                "已完成"
+            );
 
     }
 
@@ -7455,7 +7483,7 @@ async function saveFieldCapture(text,options = {}) {
 async function toggleCaptureNote(id) {
     if (!currentUser || currentPage === 'administration') return;
     const note=inboxNotes.find(n=>String(n.id)===String(id));
-    if (!note || note.captureKind!=='task') return;
+    if (!note) return;
     await updateDoc(doc(db,'users',currentUser.uid,'inboxNotes',String(id)),{done:!note.done});
 }
 window.YaoWorkspace = Object.freeze({

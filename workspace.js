@@ -1,4 +1,6 @@
 import {createFieldHome} from './capture-view.js';
+import {enableSwipeDone} from './swipe.js';
+enableSwipeDone();
 /* YAO redesigned field workspace. Pure DOM enhancement to the existing YAO app.
    No Firestore calls and no modifications to administrative forms. */
 (() => {
@@ -25,10 +27,11 @@ import {createFieldHome} from './capture-view.js';
   const navNames = {dashboard:['◈','總覽'],records:['▤','工作紀錄'],projects:['◇','我的案場'],calendar:['▦','行事曆'],reminders:['◉','提醒中心'],administration:['▧','工程行政'],logistics:['▣','進料／出貨'],people:['♙','人員安排'],inspection:['◎','查驗'],inbox:['▥','隨手記']};
   const stored = key => {try{return localStorage.getItem(key)}catch{return null}};
   const save = (key, value) => {try{localStorage.setItem(key,value)}catch{}};
-  const themeKey='YAO_NEXT_THEME';
+  // New key for the 2026-10 dark redesign so every device starts dark once.
+  const themeKey='YAO_THEME_2026';
   const themeMedia=matchMedia('(prefers-color-scheme: dark)');
   const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
-  let theme=stored(themeKey)||'light';
+  let theme=stored(themeKey)||'dark';
   if (!['system','light','dark'].includes(theme)) theme='system';
   function syncTheme(){
     const resolved=theme==='system'?(themeMedia.matches?'dark':'light'):theme;

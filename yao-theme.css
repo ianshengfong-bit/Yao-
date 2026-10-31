@@ -1,0 +1,197 @@
+/* YAO 2026-10 theme: one palette for field, administration and login.
+   Loaded last. Dark is the default; light keeps the same structure.
+   Every older layer (--yao-*, --v6-*, --next-*, --field-*) is mapped onto these tokens. */
+html:root body{
+  --t-bg:#f3f4f6;--t-surface:#ffffff;--t-raised:#f7f8fa;--t-soft:#eef0f3;--t-line:#e1e4e9;--t-line-strong:#cdd2d9;
+  --t-ink:#18202a;--t-muted:#667180;--t-faint:#9aa3ae;
+  --t-accent:#e5641a;--t-accent-hover:#cf5510;--t-accent-soft:#fdeee4;--t-on-accent:#ffffff;
+  --t-done:#1f9a5a;--t-done-soft:#e3f5eb;--t-late:#d64535;--t-late-soft:#fdeceb;--t-warn:#b7791f;--t-warn-soft:#fdf3e1;
+  --t-shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.05);
+  --t-radius:14px;
+}
+html:root body[data-yao-theme=dark]{
+  --t-bg:#0f1318;--t-surface:#171c23;--t-raised:#1d232b;--t-soft:#242b34;--t-line:#2b333d;--t-line-strong:#3a4450;
+  --t-ink:#e8ecf1;--t-muted:#97a2b0;--t-faint:#6b7684;
+  --t-accent:#ff7a2e;--t-accent-hover:#ff8f4f;--t-accent-soft:#3a2416;--t-on-accent:#1c0e04;
+  --t-done:#3ccf86;--t-done-soft:#173326;--t-late:#ff6b5c;--t-late-soft:#3a1d1b;--t-warn:#f0b34a;--t-warn-soft:#352a14;
+  --t-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 6px 20px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+html:root body,html:root body.yao-next,html:root body.yao-next-field,html:root body[data-yao-theme=dark].yao-next-field{
+  --yao-ink:var(--t-ink);--yao-sidebar:var(--t-surface);--yao-accent:var(--t-accent);--yao-accent-dark:var(--t-accent);--yao-accent-soft:var(--t-accent-soft);--yao-bg:var(--t-bg);--yao-border:var(--t-line);--yao-muted:var(--t-muted);
+  --v6-bg:var(--t-bg);--v6-ink:var(--t-ink);--v6-muted:var(--t-muted);--v6-border:var(--t-line);--v6-card:var(--t-surface);--v6-card-solid:var(--t-surface);--v6-input:var(--t-raised);--v6-accent:var(--t-accent);--v6-accent2:var(--t-accent);--v6-sidebar:var(--t-surface);--v6-shadow:var(--t-shadow);
+  --next-bg:var(--t-bg);--next-ink:var(--t-ink);--next-muted:var(--t-muted);--next-line:var(--t-line);--next-surface:var(--t-surface);--next-soft:var(--t-soft);--next-side:var(--t-surface);--next-accent:var(--t-accent);--next-accent2:var(--t-accent);--next-hover:var(--t-soft);--next-sidebar-text:var(--t-muted);--next-shadow:var(--t-shadow);--next-orbit:var(--t-line);
+  --field-on:var(--t-on-accent);--field-late:var(--t-late);
+  background:var(--t-bg)!important;color:var(--t-ink);
+}
+
+/* ---------- Base surfaces ---------- */
+html:root body #system,html:root body .main,html:root body #app{background:transparent!important;color:var(--t-ink)}
+html:root body .sidebar{background:var(--t-surface)!important;border-color:var(--t-line)!important;color:var(--t-ink)}
+html:root body .topbar{background:transparent!important;color:var(--t-ink)}
+html:root body :is(.card,.project-card,.stat,.admin-panel,.admin-stat,.admin-task-list,.modal-content,.modal-box,.modal .card,.login-card,.admin-dialog,.admin-sheet){background:var(--t-surface)!important;border-color:var(--t-line)!important;color:var(--t-ink)!important;box-shadow:var(--t-shadow)!important}
+html:root body :is(h1,h2,h3,h4,strong){color:inherit}
+html:root body :is(.muted,small,.compact-item-meta,.compact-item-note){color:var(--t-muted)}
+
+/* ---------- Form controls ---------- */
+html:root body :is(input:not([type=checkbox]):not([type=radio]),textarea,select){background:var(--t-raised)!important;color:var(--t-ink)!important;border-color:var(--t-line)!important}
+html:root body :is(input,textarea)::placeholder{color:var(--t-faint)!important;opacity:1}
+html:root body :is(input,textarea,select):focus{border-color:var(--t-accent)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--t-accent) 22%,transparent)!important;outline:none}
+html:root body input[type=checkbox]{accent-color:var(--t-accent)}
+
+/* ---------- Buttons: one primary, quiet secondaries ---------- */
+html:root body :is(.btn,.mini-btn){background:var(--t-raised)!important;color:var(--t-ink)!important;border:1px solid var(--t-line)!important;box-shadow:none!important;border-radius:10px!important}
+html:root body :is(.btn,.mini-btn):hover{border-color:var(--t-line-strong)!important;background:var(--t-soft)!important}
+html:root body :is(.btn.primary,.quick-add,#loginBtn,.login-card button[type=submit],.admin-primary,.btn.admin-primary){background:var(--t-accent)!important;border-color:var(--t-accent)!important;color:var(--t-on-accent)!important;font-weight:600}
+html:root body :is(.btn.primary,.quick-add,.admin-primary):hover{background:var(--t-accent-hover)!important}
+html:root body :is(.mini-btn.delete,.danger,.btn.danger){color:var(--t-late)!important}
+html:root body button:disabled{opacity:.5}
+
+/* ---------- Navigation ---------- */
+html:root body #nav .nav-item{color:var(--t-muted)!important;background:transparent!important}
+html:root body #nav .nav-item:hover{background:var(--t-soft)!important;color:var(--t-ink)!important}
+html:root body #nav .nav-item.active{background:var(--t-accent-soft)!important;color:var(--t-accent)!important;box-shadow:inset 3px 0 var(--t-accent)!important}
+html:root body .sidebar .brand .logo{background:var(--t-accent)!important;color:var(--t-on-accent)!important}
+html:root body .next-mobile-nav{background:color-mix(in srgb,var(--t-surface) 92%,transparent)!important;border-top:1px solid var(--t-line)!important;backdrop-filter:blur(14px)}
+html:root body .next-mobile-nav button{color:var(--t-muted)!important;background:transparent!important}
+html:root body .next-mobile-nav button.selected{color:var(--t-accent)!important;background:var(--t-accent-soft)!important}
+html:root body .next-theme-modes{background:var(--t-soft)!important}
+html:root body .next-theme-modes button.selected{background:var(--t-surface)!important;color:var(--t-accent)!important}
+
+/* ---------- Lists and tags ---------- */
+html:root body .list-row{background:transparent!important;border-color:var(--t-line)!important;color:var(--t-ink)}
+html:root body .list-row:hover{background:var(--t-raised)!important}
+html:root body .tag{background:var(--t-soft)!important;color:var(--t-muted)!important;border-color:transparent!important}
+html:root body .empty,html:root body .field-empty,html:root body .admin-empty{color:var(--t-muted)!important;background:transparent!important}
+
+/* ---------- Field home ---------- */
+html:root body .field-composer{background:var(--t-surface)!important;border:1px solid var(--t-line-strong)!important;box-shadow:var(--t-shadow)!important}
+html:root body .field-composer:focus-within{border-color:var(--t-accent)!important}
+html:root body #nextSmartInput{background:transparent!important;border:0!important;box-shadow:none!important}
+html:root body .field-composer-heading{color:var(--t-accent)!important}
+html:root body .field-chip{background:var(--t-accent-soft)!important;color:var(--t-accent)!important}
+html:root body .field-today{background:var(--t-surface)!important;border-color:var(--t-line)!important}
+html:root body .field-today-items .field-note-card{background:var(--t-raised)!important;border-color:var(--t-line)!important}
+html:root body .field-mini-projects>button,html:root body .field-tool-grid button,html:root body .field-admin-link{background:var(--t-surface)!important;border-color:var(--t-line)!important;color:var(--t-ink)!important}
+html:root body .field-record-meta>span{background:var(--t-soft)!important;color:var(--t-muted)!important}
+html:root body .field-feed-tabs button[aria-pressed=true],html:root body .field-list-tabs button[aria-pressed=true]{background:var(--t-accent-soft)!important;color:var(--t-accent)!important}
+html:root body .field-note-card.is-late{box-shadow:inset 3px 0 var(--t-late)}
+
+/* Done button: green, never mistaken for a link */
+html:root body .field-note-card>footer button.field-done-btn,html:root body .field-note-actions .field-done-btn{background:var(--t-done)!important;border-color:var(--t-done)!important;color:#06140c!important}
+html:root body .field-note-card>footer button.field-done-btn.is-done,html:root body .field-note-actions .field-done-btn.is-done{background:transparent!important;color:var(--t-muted)!important;border-color:var(--t-line)!important}
+html:root body .field-note-card.is-done>header>span:first-child{color:var(--t-done)!important}
+html:root body .mobile-done-btn{background:var(--t-done-soft)!important;color:var(--t-done)!important;border-color:transparent!important;font-weight:600}
+
+/* ---------- Administration ---------- */
+html:root body .admin-page{color:var(--t-ink)}
+html:root body .admin-tabs{border-color:var(--t-line)!important}
+html:root body .admin-tabs button{color:var(--t-muted)!important}
+html:root body .admin-tabs button.active{color:var(--t-ink)!important;border-color:var(--t-accent)!important}
+html:root body .admin-task-row{background:var(--t-surface)!important;border-color:var(--t-line)!important;color:var(--t-ink)}
+html:root body .admin-task-row:hover{background:var(--t-raised)!important}
+html:root body .admin-task-row.is-done{opacity:.65}
+html:root body .admin-row-main{color:var(--t-ink)!important;background:transparent!important}
+html:root body .admin-complete{border-color:var(--t-line-strong)!important;background:transparent!important;color:var(--t-done)!important}
+html:root body .admin-complete:hover{border-color:var(--t-done)!important;background:var(--t-done-soft)!important}
+html:root body .admin-complete.is-checked{background:var(--t-done)!important;border-color:var(--t-done)!important;color:#06140c!important}
+html:root body :is(.admin-edit-button,.admin-mobile-row-more){background:transparent!important;color:var(--t-muted)!important;border-color:transparent!important}
+html:root body .admin-overdue,html:root body .admin-task-overdue .admin-row-deadline{color:var(--t-late)!important}
+
+/* ---------- Swipe right to complete ---------- */
+html:root body #app{overflow-x:clip}
+html:root body :is(.field-row,.list-row,.admin-task-row){position:relative;touch-action:pan-y}
+html:root body :is(.field-row,.list-row,.admin-task-row).is-swiping{transform:translateX(var(--swipe,0));transition:none;z-index:1}
+html:root body :is(.field-row,.list-row,.admin-task-row).is-swiping::before{content:attr(data-swipe-label);position:absolute;top:0;bottom:0;right:100%;width:var(--swipe,0);display:flex;align-items:center;justify-content:flex-start;padding-left:18px;box-sizing:border-box;overflow:hidden;white-space:nowrap;background:var(--t-done-soft);color:var(--t-done);font-weight:700;font-size:15px;border-radius:var(--t-radius) 0 0 var(--t-radius);transition:background .12s,color .12s}
+html:root body :is(.field-row,.list-row,.admin-task-row).swipe-ready::before{background:var(--t-done);color:#06140c}
+html:root body :is(.field-row,.list-row,.admin-task-row).swipe-commit{transform:translateX(100%);opacity:0;transition:transform .16s ease-in,opacity .16s ease-in}
+html:root body :is(.field-row,.list-row,.admin-task-row){transition:transform .2s ease-out}
+@media(prefers-reduced-motion:reduce){html:root body :is(.field-row,.list-row,.admin-task-row){transition:none!important}}
+
+/* ---------- Administration: replace hard-coded light surfaces ---------- */
+html:root body:has(.admin-page),html:root body .main:has(.admin-page){background:var(--t-bg)!important}
+html:root body .nav-count{background:var(--t-accent)!important;color:var(--t-on-accent)!important}
+html:root body .inbox-note-text{color:var(--t-ink)!important}
+html:root body :is(.admin-quick-form,.admin-filter-popover,.admin-review-card,.admin-recurring-card,.admin-schedule-preview,.admin-history-detail,.admin-mobile-header,.admin-mobile-context,.admin-mobile-summary,.admin-mobile-add,.admin-save-notice,.admin-modal .modal-head,.admin-modal .modal-actions,.admin-page>.card,.admin-overview-grid>.card,.admin-calendar-day,.admin-rounds li,.admin-timeline li){background:var(--t-surface)!important;border-color:var(--t-line)!important;color:var(--t-ink)!important}
+html:root body .admin-quick-form:focus-within{border-color:var(--t-accent)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--t-accent) 18%,transparent)!important}
+html:root body :is(.admin-quick-date,.admin-range-tabs,.admin-calendar-blank,.admin-shortcut-icon,.admin-empty-icon,.admin-project-tag,.admin-next-occurrence,.admin-date-heading,.admin-modal .admin-note,.admin-rounds p,.admin-mobile-search input,.admin-mobile-context .admin-project-symbol,.admin-recurring-card.is-paused){background:var(--t-raised)!important;border-color:var(--t-line)!important;color:var(--t-ink)!important}
+html:root body :is(.admin-range-tabs button,.admin-project-chips button,.admin-date-presets button,.admin-sheet-list>button,.admin-sheet-status button,.admin-mobile-header button,.admin-mobile-context button,.admin-mobile-summary button,.admin-save-notice button,.admin-week-strip button,.admin-future-link){background:transparent!important;border-color:var(--t-line)!important;color:var(--t-muted)!important}
+html:root body :is(.admin-range-tabs button.active,.admin-project-chips button.active,.admin-sheet-status .is-selected,.admin-mobile-summary .is-active,.admin-mobile-add nav .is-active,.admin-calendar-day.is-selected,.admin-week-strip button.is-today,.admin-stat.active,.admin-schedule-choice input:checked+span){background:var(--t-accent-soft)!important;border-color:var(--t-accent)!important;color:var(--t-accent)!important}
+html:root body :is(.admin-project-chips button span,.admin-project-chips button.active span){background:var(--t-soft)!important;color:inherit!important}
+html:root body .admin-mobile-add .admin-mobile-create,html:root body .admin-mobile-header .admin-brand-mark{background:var(--t-accent)!important;color:var(--t-on-accent)!important}
+html:root body .admin-stat{background:var(--t-surface)!important;border-color:var(--t-line)!important;color:var(--t-ink)!important}
+html:root body .admin-stat.has-overdue{border-color:var(--t-late)!important}
+html:root body .admin-row-deadline{color:var(--t-muted)!important;background:transparent!important}
+html:root body .admin-inline-status{background:var(--t-raised)!important;color:var(--t-ink)!important;border-color:var(--t-line)!important}
+html:root body .admin-mobile-project-name strong,html:root body .admin-mobile-listbar>span{color:var(--t-ink)!important}
+/* Status colors: same meaning, dark-friendly tints */
+html:root body :is(.admin-badge,.admin-calendar-label,.admin-mobile-status){background:var(--t-soft)!important;color:var(--t-muted)!important;border-color:transparent!important}
+html:root body :is(.admin-badge.admin-overdue,.admin-calendar-label.admin-overdue,.admin-mobile-due.admin-overdue em,.admin-mobile-status.admin-state-returned,.admin-error,.admin-save-notice.is-error){background:var(--t-late-soft)!important;color:var(--t-late)!important}
+html:root body :is(.admin-badge.admin-soon,.admin-calendar-label.admin-soon,.admin-mobile-due.admin-soon em,.admin-badge.admin-week,.admin-calendar-label.admin-week,.admin-mobile-due.admin-week em,.admin-mobile-status.admin-state-1,.admin-save-notice.is-pending){background:var(--t-warn-soft)!important;color:var(--t-warn)!important}
+html:root body :is(.admin-mobile-status.admin-state-2,.admin-mobile-status.admin-state-3,.admin-mobile-status.admin-state-reviewing,.admin-info){background:var(--t-accent-soft)!important;color:var(--t-accent)!important}
+html:root body :is(.admin-badge.admin-done,.admin-calendar-label.admin-done,.admin-mobile-status.admin-state-4,.admin-mobile-status.admin-state-approved){background:var(--t-done-soft)!important;color:var(--t-done)!important}
+html:root body .admin-modal :is(input,textarea,select){background:var(--t-raised)!important;color:var(--t-ink)!important;border-color:var(--t-line)!important}
+html:root body :is(.modal,.admin-modal)>:is(.modal-content,.modal-box,.modal-card,div:first-child){background:var(--t-surface);color:var(--t-ink)}
+html:root body .admin-mobile-listbar>span{background:var(--t-soft)!important}
+html:root body #adminMobileRange{background:transparent!important;border-color:transparent!important;font-weight:700}
+html:root body .field-home-search input{background:transparent!important;border:0!important;box-shadow:none!important}
+html:root body .field-home-search{border-color:var(--t-line)!important}
+html:root body .field-home-search:focus-within{border-color:var(--t-accent)!important}
+html:root body .mobile-done-btn.is-done{background:transparent!important;color:var(--t-muted)!important;border-color:var(--t-line)!important;font-weight:500}
+
+/* ---------- 工務首頁 2026-10：一行輸入＋兩行卡片 ---------- */
+html:root body .field-capture{margin-bottom:4px}
+html:root body .field-composer{padding:8px 8px 8px 16px!important;border-radius:16px!important}
+html:root body .field-composer-line{display:flex;align-items:flex-end;gap:8px}
+html:root body.yao-next-field #nextSmartInput{min-height:44px!important;height:44px;max-height:260px;resize:none!important;font-size:17px!important;line-height:1.6!important;padding:9px 0!important;overflow-y:auto}
+html:root body .field-send{flex:none;min-height:44px;min-width:72px;padding:0 18px;border:0;border-radius:12px;background:var(--t-accent);color:var(--t-on-accent);font-size:16px;font-weight:700;cursor:pointer}
+html:root body .field-send:disabled{background:var(--t-soft);color:var(--t-faint);opacity:1}
+html:root body .field-composer-extra{display:none;padding:6px 8px 2px 0}
+html:root body .field-composer:focus-within .field-composer-extra,html:root body .field-composer.has-draft .field-composer-extra{display:block}
+html:root body .field-composer-tools{display:flex;align-items:center;gap:16px;border-top:1px solid var(--t-line);margin-top:6px;padding-top:4px}
+html:root body .field-composer-tools>span{margin-left:auto;font-size:11px;color:var(--t-faint)}
+html:root body .field-save-message{margin:8px 4px 0}
+html:root body .field-home-columns{margin-top:14px}
+/* 篩選列：數字一眼看到 */
+html:root body .field-strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-bottom:6px}
+html:root body .field-strip::-webkit-scrollbar{display:none}
+html:root body .field-strip button{flex:none;display:flex;align-items:center;gap:6px;min-height:38px;padding:0 13px;border-radius:999px;border:1px solid var(--t-line);background:transparent;color:var(--t-muted);font-size:13px;cursor:pointer}
+html:root body .field-strip button b{font-weight:700;color:var(--t-ink);font-variant-numeric:tabular-nums}
+html:root body .field-strip button[aria-pressed=true]{background:var(--t-accent-soft);border-color:var(--t-accent);color:var(--t-accent)}
+html:root body .field-strip button[aria-pressed=true] b{color:var(--t-accent)}
+html:root body .field-strip button.is-late b,html:root body .field-strip button.is-late{color:var(--t-late)}
+html:root body .field-strip .field-search-toggle{margin-left:auto;width:38px;padding:0;justify-content:center;font-size:20px}
+html:root body .field-home-search{margin:0 0 8px!important}
+/* 卡片：左圓圈＋兩行 */
+html:root body .field-row{display:flex;align-items:flex-start;gap:12px;padding:12px 4px;border-bottom:1px solid var(--t-line);background:var(--t-bg)}
+html:root body .field-check{flex:none;width:28px;height:28px;margin-top:1px;border-radius:50%;border:2px solid var(--t-line-strong);background:transparent;color:#06140c;font-size:15px;font-weight:800;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;position:relative}
+html:root body .field-check::after{content:'';position:absolute;inset:-9px}
+html:root body .field-check:hover{border-color:var(--t-done);background:var(--t-done-soft)}
+html:root body .field-row.is-done .field-check{background:var(--t-done);border-color:var(--t-done)}
+html:root body .field-row.is-late .field-check{border-color:var(--t-late)}
+html:root body .field-row-body{flex:1;min-width:0;cursor:pointer;outline-offset:4px}
+html:root body .field-row-title{margin:0;font-size:15.5px;line-height:1.55;color:var(--t-ink);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+html:root body .field-row.is-open .field-row-title{-webkit-line-clamp:unset;display:block}
+html:root body .field-row.is-done .field-row-title{color:var(--t-muted);text-decoration:line-through;text-decoration-color:var(--t-line-strong)}
+html:root body .field-row-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:3px;font-size:12px;color:var(--t-muted)}
+html:root body .field-row-meta .field-overdue{color:var(--t-late)!important;font-weight:600}
+html:root body .field-row-actions{display:flex;gap:8px;margin-top:10px}
+html:root body .field-row-actions button{min-height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--t-line);background:var(--t-raised);color:var(--t-ink);font-size:13px;cursor:pointer}
+html:root body .field-more{display:block;width:100%;min-height:44px;margin-top:8px;border:1px dashed var(--t-line-strong);border-radius:12px;background:transparent;color:var(--t-muted);font-size:13px;cursor:pointer}
+/* 側欄（手機在下方） */
+html:root body .field-mini-projects>button{min-height:56px!important}
+html:root body .field-tool-grid button{grid-template-columns:auto 1fr;align-items:center;gap:8px!important}
+/* 復原列 */
+html:root body .field-undo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px);padding:8px 8px 8px 16px;border-radius:12px;background:var(--t-ink);color:var(--t-bg);box-shadow:0 8px 28px rgba(0,0,0,.35);font-size:14px}
+html:root body .field-undo[hidden]{display:none}
+html:root body .field-undo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html:root body .field-undo button{flex:none;min-height:36px;padding:0 14px;border:0;border-radius:9px;background:transparent;color:var(--t-accent);font-weight:700;font-size:14px;cursor:pointer}
+@media(min-width:761px){html:root body .field-undo{bottom:28px}}
+@media(max-width:760px){html:root body .field-composer-tools>span{display:none}}html:root body .field-strip button{padding:0 10px;gap:5px}
+html:root body .field-mini-projects>button>span:first-child{display:grid;gap:3px;flex:1;min-width:0}
+html:root body .field-mini-projects>button>span:last-child{flex:none!important;color:var(--t-faint)}
+/* ---------- 工作紀錄等列表頁 ---------- */
+html:root body.yao-next-field #app .field-record-list{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+html:root body .field-list-heading{margin-bottom:12px!important}
+html:root body .field-list-heading .btn.primary{min-height:42px;padding:0 16px}
+html:root body .field-row-actions .danger{color:var(--t-late)!important}

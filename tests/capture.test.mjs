@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readDate,readTime} from '../capture-date.js';
 import {capturePlan,parseCapture,matchProjects} from '../capture-plan.js';
-import {fieldList,projectSummaryCard} from '../field-views.js';
+import {fieldList,projectSummaryCard,pickRows,rowCounts,localDay} from '../field-views.js';
 import {createCaptureOnce} from '../capture-store.js';
 const now=new Date(2026,9,22,12),projects=[{id:'a',name:'朴子及麥寮',code:'A001'},{id:'b',name:'鹿港',code:'A002'},{id:'c',name:'已封存',code:'A003',archived:true}];
 const plan=(text,extra={})=>capturePlan(text,projects,{now,...extra});
@@ -31,9 +31,14 @@ test('重試不能覆寫完成狀態；轉成正式工作後也不能重建原�
  assert.equal(await createCaptureOnce(runTransaction,db,'missing-note',{done:false},'converted'),false);assert(!db.has('missing-note'));
  assert.equal(await createCaptureOnce(runTransaction,db,'new',{text:'新原文'},'missing-converted'),true);assert.equal(db.get('new').text,'新原文');
 });
-test('未排日期的待辦可進待辦列表，純備忘不會計入待辦',()=>{
- const data=[{id:'note',title:'未排日待辦',sourceNote:true,captureKind:'task',date:'',done:false},{id:'memo',title:'純備忘',sourceNote:true,captureKind:'note',date:'',done:false}];
- const html=fieldList(data,'工作紀錄',r=>'ROW:'+r.title,'active');assert(html.includes('ROW:未排日待辦'));assert(!html.includes('ROW:純備忘'));
+test('未完成列表包含未排日待辦與隨手記（隨手記也能直接完成）',()=>{
+ const data=[{id:'note',title:'未排日待辦',sourceNote:true,captureKind:'task',date:'',done:false},{id:'memo',title:'純備忘',sourceNote:true,captureKind:'note',date:'',done:false},{id:'old',title:'已處理',sourceNote:true,captureKind:'note',date:'',done:true}];
+ const html=fieldList(data,'工作紀錄',r=>'ROW:'+r.title,'open');assert(html.includes('ROW:未排日待辦'));assert(html.includes('ROW:純備忘'));assert(!html.includes('ROW:已處理'));
+});
+test('未完成依日期排：逾期在前、沒日期的在後',()=>{
+ const today=localDay();const data=[{id:'a',title:'沒日期',date:'',done:false},{id:'b',title:'逾期',date:'2000-01-01',done:false},{id:'c',title:'今天',date:today,done:false}];
+ assert.deepEqual(pickRows(data,'open',today).map(r=>r.title),['逾期','今天','沒日期']);
+ assert.deepEqual(rowCounts(data,today),{open:3,today:1,late:1,done:0,all:3});
 });
 test('分類修正需要真實案場和有效日期時間',()=>{
  const p=plan('要追蹤材料回覆',{changes:{projectId:'b',date:'2026-10-25'}});assert.equal(p.collection,'items');assert.equal(p.data.title,'要追蹤材料回覆');

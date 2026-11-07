@@ -198,3 +198,13 @@ html:root body .admin-mobile-add nav .admin-go-field{color:var(--t-accent)}
   body.yao-next:not(.yao-next-field) .next-mobile-nav{display:grid!important}
   body.yao-next:not(.yao-next-field) #system .main{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
 }
+
+/* 刪除按鈕：紅字、放在左邊，跟「儲存」分開避免按錯 */
+#itemModal .modal-actions{display:flex;align-items:center;gap:10px}
+#itemModal .item-delete-btn{margin-right:auto;color:var(--t-late)!important;border-color:transparent!important;background:transparent!important}
+#itemModal .item-delete-btn[hidden]{display:none}
+.field-row-actions button.danger{color:var(--t-late)}
+#itemModal .modal-actions{display:grid!important;grid-template-columns:auto 1fr 1.4fr;gap:8px}
+#itemModal .modal-actions:has(.item-delete-btn[hidden]){grid-template-columns:1fr 1.4fr}
+#itemModal .modal-actions .btn{width:100%;margin:0}
+#itemModal .item-delete-btn{padding:0 14px;width:auto!important}

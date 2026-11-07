@@ -40,7 +40,7 @@ import {
 import {capturePlan} from './capture-plan.js';
 import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist} from './field-views.js';
 
-import {createAdministration} from "./admin.js?v=20261107-4";
+import {createAdministration} from "./admin.js?v=20261107-5";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 
@@ -7528,6 +7528,9 @@ async function convertCaptureNote(id,{projectId,date}={}) {
    存成 checklist（文字陣列）＋ checks（已備好的序號）。 */
 let checklistDraft = [];
 function loadChecklistEditor(id) {
+    // 編輯舊資料、或整理隨手記時才顯示「刪除」
+    const del=document.getElementById('deleteItemFromModal');
+    if (del) { const editing=id!==null&&id!==undefined; del.hidden=!(editing||pendingInboxNoteId); del.dataset.target=editing?'item:'+id:pendingInboxNoteId?'note:'+pendingInboxNoteId:''; }
     let source = null;
     if (id !== null && id !== undefined) source = items.find(x=>String(x.id)===String(id));
     else if (pendingInboxNoteId) source = inboxNotes.find(n=>String(n.id)===String(pendingInboxNoteId));
@@ -7561,6 +7564,15 @@ document.addEventListener('click', e=>{
 document.addEventListener('keydown', e=>{
     const i=e.target.dataset?.iceText; if(i===undefined||e.key!=='Enter'||e.isComposing)return;
     e.preventDefault(); checklistDraft.splice(Number(i)+1,0,{text:'',on:false}); drawChecklistEditor(); document.querySelector(`[data-ice-text="${Number(i)+1}"]`)?.focus();
+});
+
+// 編輯視窗的「刪除」：用原本的刪除流程（會先跳確認），刪掉後關閉視窗。
+document.getElementById('deleteItemFromModal')?.addEventListener('click', async event => {
+    event.preventDefault();
+    const [kind,...rest]=String(event.currentTarget.dataset.target||'').split(':'),id=rest.join(':');
+    if (!id) return;
+    if (kind==='item') { await deleteItem(id); if (!items.some(x=>String(x.id)===String(id))) closeItemModal(); }
+    else if (kind==='note') { await deleteInboxNote(id); if (!inboxNotes.some(x=>String(x.id)===String(id))) closeItemModal(); }
 });
 
 // 小清單「已備好」：只更新 checks 欄位，本機立即生效、背景同步。

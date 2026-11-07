@@ -26,13 +26,30 @@ export function filterStrip(counts,filter,attr,extra = '') {
     const f=normalizeFilter(filter);
     return `<div class="field-strip" role="group" aria-label="篩選紀錄">${[['open','未完成'],['today','今天'],['late','逾期'],['done','已完成'],['all','全部']].filter(([v])=>v!=='late'||counts.late||f==='late').map(([v,n])=>`<button type="button" ${attr}="${v}" aria-pressed="${f===v}"${v==='late'?' class="is-late"':''}>${n}<b>${counts[v]}</b></button>`).join('')}${extra}</div>`;
 }
+/* 一筆打很多樣東西時，自動拆成小清單。
+   只用明確的分隔：以及、還有、、，,；;＋+、換行、「 和 」「 跟 」（前後要有空白）。
+   開頭的案場名稱會先拿掉，例如「朴子 泵浦啟動燈*3 以及 7609 鐵棍一隻」→ 泵浦啟動燈 ×3／7609 鐵棍一隻 */
+export function splitChecklist(text,project = '') {
+    let t=String(text||'').trim();
+    const names=[project,...String(project||'').split(/[及與和、/\s-]+/)].filter(n=>n&&n.length>=2).sort((a,b)=>b.length-a.length);
+    for(const n of names)if(t.startsWith(n)){t=t.slice(n.length).replace(/^[\s:：,，、-]+/,'');break}
+    const parts=t.split(/\s*(?:以及|還有|[、，,；;＋+\n]|\s和\s|\s跟\s)\s*/).map(x=>x.trim().replace(/[*＊xX×]\s*(\d+)\s*$/,' ×$1')).filter(x=>x.length>0);
+    if(parts.length>=2)for(const n of names)if(parts[0].includes(n)){parts[0]=parts[0].replace(n,'').replace(/\s{2,}/g,' ').trim();break}
+    return parts.length>=2&&parts.length<=30&&parts[0]?parts:[];
+}
+// 有自己編過的清單就用自己的；沒有才從標題自動拆。
+export const rowChecklist = (r,project = '') => Array.isArray(r.checklist) ? r.checklist.filter(Boolean) : splitChecklist(r.title,project);
 const shortDate = date => date ? date.slice(5).replace('-','/') : '';
 /* r: {id,title,done,date,time,reminderRequest}; opts.check 是完成按鈕的屬性字串，opts.actions 是展開後的按鈕 HTML。 */
-export function rowCard(r,{key,project = '',kind = '',open = false,check,expandAttr,actions = '',today = localDay()}) {
+export function rowCard(r,opts) {
+    const {key,project = '',kind = '',open = false,check,expandAttr,actions = '',today = localDay()}=opts;
     const late=isLateRow(r,today),when=r.date?shortDate(r.date)+(r.time?' '+r.time:''):'';
     const days=late?Math.round((Date.parse(today)-Date.parse(r.date))/864e5):0;
-    const meta=[project,when,kind].filter(Boolean).map(t=>`<span>${e(t)}</span>`).join('');
-    return `<article class="field-row${r.done?' is-done':''}${late?' is-late':''}${open?' is-open':''}"><button type="button" class="field-check" ${check} aria-label="${r.done?'恢復':'完成'}：${e(r.title)}">${r.done?'✓':''}</button><div class="field-row-body" ${expandAttr}="${e(key)}" role="button" tabindex="0" aria-expanded="${open}"><p class="field-row-title">${e(r.title)}</p><div class="field-row-meta">${meta}${late?`<span class="field-overdue">逾期 ${days} 天</span>`:''}${r.reminderRequest?'<span class="field-row-bell" title="提醒要求已記下；通知尚未設定">⏰</span>':''}</div>${open&&actions?`<div class="field-row-actions">${actions}</div>`:''}</div></article>`;
+    const list=opts.source?rowChecklist(r,project):[],ticks=new Set((r.checks||[]).map(Number));
+    const ready=list.filter((_,i)=>ticks.has(i)).length;
+    const meta=[project,when,kind].filter(Boolean).map(t=>`<span>${e(t)}</span>`).join('')+(list.length?`<span class="field-ready${ready===list.length?' is-all':''}">已備好 ${ready}/${list.length}</span>`:'');
+    const checklist=list.length?`<ul class="field-checklist">${list.map((x,i)=>`<li><button type="button" class="field-tick${ticks.has(i)?' is-on':''}" data-tick="${i}" data-tick-row="${e(opts.source)}:${e(r.id)}" aria-pressed="${ticks.has(i)}"><span aria-hidden="true">${ticks.has(i)?'✓':''}</span>${e(x)}</button></li>`).join('')}</ul>`:'';
+    return `<article class="field-row${r.done?' is-done':''}${late?' is-late':''}${open?' is-open':''}"><button type="button" class="field-check" ${check} aria-label="${r.done?'恢復':'完成'}：${e(r.title)}">${r.done?'✓':''}</button><div class="field-row-body" ${expandAttr}="${e(key)}" role="button" tabindex="0" aria-expanded="${open}"><p class="field-row-title">${e(r.title)}</p><div class="field-row-meta">${meta}${late?`<span class="field-overdue">逾期 ${days} 天</span>`:''}${r.reminderRequest?'<span class="field-row-bell" title="提醒要求已記下；通知尚未設定">⏰</span>':''}</div>${checklist}${open&&actions?`<div class="field-row-actions">${actions}</div>`:''}</div></article>`;
 }
 // 完成後底部出現「復原」5 秒，避免滑錯就找不到。
 let undoTimer=0,undoAction=null;

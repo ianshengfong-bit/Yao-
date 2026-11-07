@@ -1,6 +1,8 @@
 import {createFieldHome} from './capture-view.js';
 import {enableSwipeDone} from './swipe.js';
+import {enhanceItemForm} from './item-form.js';
 enableSwipeDone();
+enhanceItemForm();
 /* YAO redesigned field workspace. Pure DOM enhancement to the existing YAO app.
    No Firestore calls and no modifications to administrative forms. */
 (() => {
@@ -31,11 +33,13 @@ enableSwipeDone();
   const themeKey='YAO_THEME_2026';
   const themeMedia=matchMedia('(prefers-color-scheme: dark)');
   const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
-  let theme=stored(themeKey)||'dark';
+  // 預設跟著手機／電腦的日夜設定；自己切過就記住你的選擇。
+  let theme=stored(themeKey)||'system';
   if (!['system','light','dark'].includes(theme)) theme='system';
   function syncTheme(){
     const resolved=theme==='system'?(themeMedia.matches?'dark':'light'):theme;
     document.body.dataset.yaoTheme=resolved;
+    document.querySelector('meta[name=theme-color]')?.setAttribute('content',resolved==='dark'?'#0f1318':'#f3f4f6');
     document.querySelectorAll('[data-next-theme]').forEach(b=>{b.classList.toggle('selected',b.dataset.nextTheme===theme);b.setAttribute('aria-pressed',String(b.dataset.nextTheme===theme));});
   }
   themeMedia.addEventListener?.('change',syncTheme);
@@ -174,12 +178,16 @@ enableSwipeDone();
 
   function schedule(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;sync()});}
   renderNavigation();setupMobileNavigation();syncTheme();sync();
+  try{const want=new URLSearchParams(location.search).get('page');if(want){const go=()=>{const b=nav.querySelector(`.nav-item[data-page="${CSS.escape(want)}"]`);if(b&&isLogged()&&window.YaoWorkspace?.ready()){b.click();history.replaceState(null,'',location.pathname);return true}};if(!go()){const t=setInterval(()=>{if(go())clearInterval(t)},300);setTimeout(()=>clearInterval(t),15000)}}}catch{}
   window.addEventListener('yao:before-render',()=>{
     const input=document.getElementById('nextSmartInput');
     restoreInputFocus=Boolean(input&&document.activeElement===input);
     restoreCursor=input?.selectionStart ?? null;
   });
   window.addEventListener('yao:rendered',()=>{dataDirty=true;schedule()});
+  // 行政頁的「回現場」按鈕
+  document.addEventListener('click',e=>{if(e.target.closest?.('[data-go-field]')){e.preventDefault();openPage('dashboard');window.scrollTo(0,0)}});
+  window.addEventListener('yao:admin-changed',()=>{dataDirty=true;schedule()});
   window.addEventListener('yao:item-saved',()=>{draft='';dataDirty=true;schedule()});
   new MutationObserver(schedule).observe(app,{childList:true});
   new MutationObserver(schedule).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});

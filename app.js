@@ -38,10 +38,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
 import {capturePlan} from './capture-plan.js';
-import {createCaptureOnce} from './capture-store.js';
-import {fieldList,projectSummaryCard,rowCard,showUndo} from './field-views.js';
+import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist} from './field-views.js';
 
-import {createAdministration} from "./admin.js?v=20261022-jade-2";
+import {createAdministration} from "./admin.js?v=20261107-4";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 
@@ -55,9 +54,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 import {
-    getFirestore,
+    initializeFirestore,
+    persistentLocalCache,
+    persistentMultipleTabManager,
     collection,
     doc,
+    setDoc,
+    writeBatch,
     addDoc,
     runTransaction,
     updateDoc,
@@ -86,10 +89,26 @@ const firebaseApp =
 const auth =
     getAuth(firebaseApp);
 
-const db =
-    getFirestore(firebaseApp);
+// 資料存一份在手機／電腦本機：開啟更快、訊號差也能先記下，回到有網路自動同步。
+let db;
+try {
+    db = initializeFirestore(firebaseApp, {
+        localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+    });
+} catch (error) {
+    console.warn('本機快取無法啟用，改用一般模式', error);
+    db = initializeFirestore(firebaseApp, {});
+}
 
 
+
+// 雲端寫入：先在本機生效（畫面立刻更新），最多等 0.8 秒雲端回應就繼續；
+// 訊號差時在背景完成，真的失敗才提示。
+function quickWrite(promise,label='資料'){
+    let late=false;
+    promise.catch(error=>{if(late){console.error(error);toast(label+'沒有同步到雲端，請確認網路後再試一次')}});
+    return Promise.race([promise,new Promise(resolve=>setTimeout(()=>{late=true;resolve()},800))]);
+}
 /* =========================================================
 全域狀態
 ========================================================= */
@@ -2058,7 +2077,7 @@ async function deleteInboxNote(id) {
 
     try {
 
-        await deleteDoc(
+        await quickWrite(deleteDoc(
             doc(
                 db,
                 "users",
@@ -2066,7 +2085,7 @@ async function deleteInboxNote(id) {
                 "inboxNotes",
                 String(id)
             )
-        );
+        ));
 
         toast("待整理紀錄已刪除");
 
@@ -2118,7 +2137,7 @@ async function removePendingInboxNoteAfterSave() {
 
     try {
 
-        await deleteDoc(
+        await quickWrite(deleteDoc(
             doc(
                 db,
                 "users",
@@ -2126,7 +2145,7 @@ async function removePendingInboxNoteAfterSave() {
                 "inboxNotes",
                 id
             )
-        );
+        ));
 
     }
     catch (error) {
@@ -2520,7 +2539,8 @@ function itemRow(item) {
 
 // 工作紀錄／進料出貨／人員／查驗：和工務首頁同樣的兩行卡片。
 // 左邊圓圈或往右滑完成；點卡片展開編輯、分享、刪除。
-let fieldListFilter = 'all';
+// 預設只看未完成，舊的已完成不會整片跑出來；會記住上次選的篩選。
+let fieldListFilter = (()=>{try{return localStorage.getItem('YAO_LIST_FILTER')||'open'}catch{return 'open'}})();
 let fieldListLimit = 30;
 const fieldListOpen = new Set();
 function renderListPage(data,title) {
@@ -2532,12 +2552,13 @@ function renderListPage(data,title) {
         const actions=r.sourceNote
             ?`<button type="button" data-note-organize="${id}">整理成工作</button><button type="button" data-row-copy="${esc(key)}">複製文字</button>`
             :`<button type="button" onclick="editItem('${id}')">編輯</button><button type="button" onclick="shareItem('${id}')">分享</button><button type="button" class="danger" onclick="deleteItem('${id}')">刪除</button>`;
-        return rowCard(r,{key,project:getProject(r.projectId)?.name||'',kind:r.sourceNote?(r.captureKind==='task'?'待辦':'隨手記'):r.type,open:fieldListOpen.has(key),expandAttr:'data-row-expand',check:r.sourceNote?`data-note-done="${id}"`:`data-row-done="${id}"`,actions});
+        return rowCard(r,{source:r.sourceNote?'note':'item',key,project:getProject(r.projectId)?.name||'',kind:r.sourceNote?(r.captureKind==='task'?'待辦':'隨手記'):r.type,open:fieldListOpen.has(key),expandAttr:'data-row-expand',check:r.sourceNote?`data-note-done="${id}"`:`data-row-done="${id}"`,actions});
     };
     app.innerHTML = fieldList(rows,title,listRow,fieldListFilter,{limit:fieldListLimit});
     const rerender=()=>renderListPage(data,title);
     app.querySelectorAll('[data-field-list]').forEach(button => button.addEventListener('click', () => {
         fieldListFilter = button.dataset.fieldList;
+        try{localStorage.setItem('YAO_LIST_FILTER',fieldListFilter)}catch{}
         fieldListLimit = 30;
         rerender();
         app.querySelector('[data-field-list="'+fieldListFilter+'"]')?.focus({preventScroll:true});
@@ -3091,6 +3112,9 @@ function openItemModal(
     editingItemId =
         id;
 
+    // 小清單編輯器：等表單其他欄位填好後再載入
+    queueMicrotask(()=>loadChecklistEditor(id));
+
 
     const modal =
         document.querySelector(
@@ -3452,7 +3476,7 @@ async function deleteItem(id) {
 
     try {
 
-        await deleteDoc(
+        await quickWrite(deleteDoc(
             doc(
                 db,
                 "users",
@@ -3460,7 +3484,7 @@ async function deleteItem(id) {
                 "items",
                 String(id)
             )
-        );
+        ));
 
 
         clearReminderHistoryForItem(id);
@@ -3525,7 +3549,7 @@ async function toggleDone(id, options = {}) {
 
     try {
 
-        await updateDoc(
+        await quickWrite(updateDoc(
             doc(
                 db,
                 "users",
@@ -3537,7 +3561,7 @@ async function toggleDone(id, options = {}) {
                 done:
                     !item.done
             }
-        );
+        ));
 
 
         // 工務列表自己顯示「復原」列，不再重複跳提示。
@@ -6711,6 +6735,7 @@ if (itemForm) {
                     false
 
             };
+            Object.assign(data, readChecklistEditor());
 
             data.tgMinutes = telegramSchedule(data);
             data.tgScheduleVersion = 1;
@@ -6742,7 +6767,7 @@ if (itemForm) {
                         );
 
 
-                    await updateDoc(
+                    await quickWrite(updateDoc(
                         doc(
                             db,
                             "users",
@@ -6759,7 +6784,7 @@ if (itemForm) {
                                 false
 
                         }
-                    );
+                    ));
 
 
                     /*
@@ -6792,15 +6817,15 @@ if (itemForm) {
                         const sourceId=String(pendingInboxNoteId);
                         const target=doc(userCollection('items'),'converted-'+sourceId);
                         const source=doc(userCollection('inboxNotes'),sourceId);
-                        await runTransaction(db,async tx=>{
-                            const existing=await tx.get(target),original=await tx.get(source);
-                            if(!existing.exists()&&!original.exists())throw new Error('這筆原文已變更，請重新整理。');
-                            if(!existing.exists())tx.set(target,{...data,createdAt:Date.now(),sourceCaptureId:sourceId,originalText:original.data().text,reminderRequest:original.data().reminderRequest||''});
-                            tx.delete(source);
-                        });
+                        // 先在手機上完成（不用等雲端來回），背景同步。
+                        const original=inboxNotes.find(n=>String(n.id)===sourceId);
+                        const batch=writeBatch(db);
+                        batch.set(target,{...data,createdAt:Date.now(),sourceCaptureId:sourceId,originalText:original?.text||'',reminderRequest:original?.reminderRequest||''});
+                        batch.delete(source);
+                        await quickWrite(batch.commit());
                         pendingInboxNoteId=null;
                     } else {
-                        await addDoc(userCollection('items'),data);
+                        await quickWrite(setDoc(doc(userCollection('items')),data));
                         if(pendingInboxNoteId)await removePendingInboxNoteAfterSave();
                     }
 
@@ -7193,13 +7218,13 @@ if (inboxForm) {
 
             try {
 
-                await addDoc(
+                await quickWrite(addDoc(
                     userCollection("inboxNotes"),
                     {
                         text,
                         createdAt: Date.now()
                     }
-                );
+                ));
 
                 closeInboxModal();
                 toast("已放到待整理");
@@ -7476,15 +7501,91 @@ async function saveFieldCapture(text,options = {}) {
     const plan=capturePlan(text,projects,options);
     const uid=currentUser.uid;
     const ref=doc(db,'users',uid,plan.collection,'quick-'+requestId);
-    const convertedRef=plan.collection==='inboxNotes'?doc(db,'users',uid,'items','converted-quick-'+requestId):null;
-    await createCaptureOnce(runTransaction,db,ref,plan.data,convertedRef);
-    return {id:'quick-'+requestId,collection:plan.collection,parsed:plan.parsed};
+    // 先寫進手機本機（畫面立即更新），再背景同步到雲端。
+    // 以前用 transaction 必須等伺服器來回，手機訊號弱時會一直卡在「儲存中」。
+    // 文件編號固定（quick-requestId），重送也只會寫同一筆，不會重複。
+    const synced=setDoc(ref,plan.data);
+    return {id:'quick-'+requestId,collection:plan.collection,parsed:plan.parsed,synced};
 }
+// 隨手記一鍵轉成工作：補上案場與日期即可；本機先完成、背景同步。
+async function convertCaptureNote(id,{projectId,date}={}) {
+    if (!currentUser) throw new Error('請先登入。');
+    const note=inboxNotes.find(n=>String(n.id)===String(id));
+    if (!note) throw new Error('找不到這筆隨手記，可能已經整理過了。');
+    if (!projects.some(p=>!p.archived&&String(p.id)===String(projectId))) throw new Error('請先選擇案場。');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))) throw new Error('請選擇日期。');
+    const type=note.type&&note.type!=='紀錄'?note.type:'工作';
+    const uid=currentUser.uid,batch=writeBatch(db);
+    batch.set(doc(db,'users',uid,'items','converted-'+id),{
+        createdAt:Date.now(),captureSource:'quick',sourceCaptureId:String(id),originalText:note.text||'',reminderRequest:note.reminderRequest||'',
+        projectId:String(projectId),type,date,time:note.time||'',title:note.text||'',note:note.reminderRequest?'提醒要求（尚未設定）：'+note.reminderRequest:'',
+        done:false,reminder:'none',reminderOneHour:false,reminderAtTime:false,tgMinutes:[],tgScheduleVersion:1,checks:note.checks||[],...(Array.isArray(note.checklist)?{checklist:note.checklist}:{})
+    });
+    batch.delete(doc(db,'users',uid,'inboxNotes',String(id)));
+    return {synced:batch.commit()};
+}
+/* 編輯視窗裡的小清單：可以自己新增、改字、刪除、勾選。
+   存成 checklist（文字陣列）＋ checks（已備好的序號）。 */
+let checklistDraft = [];
+function loadChecklistEditor(id) {
+    let source = null;
+    if (id !== null && id !== undefined) source = items.find(x=>String(x.id)===String(id));
+    else if (pendingInboxNoteId) source = inboxNotes.find(n=>String(n.id)===String(pendingInboxNoteId));
+    const title = document.getElementById('itemTitle')?.value || '';
+    const project = getProject(document.getElementById('itemProject')?.value)?.name || '';
+    const list = source ? rowChecklist({...source,title:source.title||source.text||title}, project) : splitChecklist(title, project);
+    const ticks = new Set((source?.checks||[]).map(Number));
+    checklistDraft = list.map((text,i)=>({text,on:ticks.has(i)}));
+    drawChecklistEditor();
+}
+function drawChecklistEditor() {
+    const box = document.getElementById('itemChecklistEditor');
+    if (!box) return;
+    box.innerHTML = `<div class="ice-head"><strong>小清單</strong><small>一項一項，可勾「已備好」</small><button type="button" data-ice="split">從標題自動拆</button></div>
+    <ul>${checklistDraft.map((r,i)=>`<li><input type="checkbox" data-ice-on="${i}" ${r.on?'checked':''} aria-label="已備好"><input type="text" data-ice-text="${i}" value="${esc(r.text)}" placeholder="例如：泵浦啟動燈 ×3"><button type="button" data-ice-del="${i}" aria-label="刪除這項">✕</button></li>`).join('')}</ul>
+    <button type="button" class="ice-add" data-ice="add">${checklistDraft.length?'＋ 新增一項':'＋ 加小清單（一項一項勾「已備好」）'}</button>`;
+}
+function readChecklistEditor() {
+    const kept = checklistDraft.map(r=>({text:String(r.text||'').trim(),on:r.on})).filter(r=>r.text);
+    return {checklist: kept.map(r=>r.text), checks: kept.map((r,i)=>r.on?i:-1).filter(i=>i>=0)};
+}
+document.addEventListener('input', e=>{const i=e.target.dataset?.iceText;if(i!==undefined&&checklistDraft[i])checklistDraft[i].text=e.target.value});
+document.addEventListener('change', e=>{const i=e.target.dataset?.iceOn;if(i!==undefined&&checklistDraft[i])checklistDraft[i].on=e.target.checked});
+document.addEventListener('click', e=>{
+    const b=e.target.closest?.('#itemChecklistEditor button');if(!b)return;
+    e.preventDefault();
+    if (b.dataset.ice==='add') { checklistDraft.push({text:'',on:false}); drawChecklistEditor(); document.querySelector(`[data-ice-text="${checklistDraft.length-1}"]`)?.focus(); }
+    else if (b.dataset.ice==='split') { const project=getProject(document.getElementById('itemProject')?.value)?.name||''; const old=new Map(checklistDraft.map(r=>[r.text,r.on])); checklistDraft=splitChecklist(document.getElementById('itemTitle')?.value||'',project).map(text=>({text,on:Boolean(old.get(text))})); if(!checklistDraft.length)toast('標題裡沒有找到「以及、頓號、逗號」分開的項目'); drawChecklistEditor(); }
+    else if (b.dataset.iceDel!==undefined) { checklistDraft.splice(Number(b.dataset.iceDel),1); drawChecklistEditor(); }
+});
+document.addEventListener('keydown', e=>{
+    const i=e.target.dataset?.iceText; if(i===undefined||e.key!=='Enter'||e.isComposing)return;
+    e.preventDefault(); checklistDraft.splice(Number(i)+1,0,{text:'',on:false}); drawChecklistEditor(); document.querySelector(`[data-ice-text="${Number(i)+1}"]`)?.focus();
+});
+
+// 小清單「已備好」：只更新 checks 欄位，本機立即生效、背景同步。
+async function toggleChecklistItem(source,id,index) {
+    if (!currentUser) return;
+    const list=source==='note'?inboxNotes:items,row=list.find(r=>String(r.id)===String(id));
+    if (!row) return;
+    const set=new Set((row.checks||[]).map(Number));set.has(index)?set.delete(index):set.add(index);
+    const checks=[...set].sort((a,b)=>a-b);
+    row.checks=checks;
+    window.dispatchEvent(new Event('yao:rendered'));
+    if (currentPage==='records') render();
+    updateDoc(doc(db,'users',currentUser.uid,source==='note'?'inboxNotes':'items',String(id)),{checks}).catch(error=>{console.error(error);toast('勾選尚未同步，請再試一次')});
+}
+document.addEventListener('click',event=>{
+    const b=event.target.closest?.('[data-tick]');if(!b)return;
+    event.preventDefault();event.stopPropagation();
+    const [source,...rest]=String(b.dataset.tickRow||'').split(':');
+    toggleChecklistItem(source,rest.join(':'),Number(b.dataset.tick));
+},true);
 async function toggleCaptureNote(id) {
     if (!currentUser || currentPage === 'administration') return;
     const note=inboxNotes.find(n=>String(n.id)===String(id));
     if (!note) return;
-    await updateDoc(doc(db,'users',currentUser.uid,'inboxNotes',String(id)),{done:!note.done});
+    await quickWrite(updateDoc(doc(db,'users',currentUser.uid,'inboxNotes',String(id)),{done:!note.done}));
 }
 window.YaoWorkspace = Object.freeze({
     listProjects: () => currentUser ? projects.map(p => ({...p})) : [],
@@ -7492,6 +7593,9 @@ window.YaoWorkspace = Object.freeze({
     listNotes: () => currentUser ? inboxNotes.map(n=>({...n})) : [],
     capture:saveFieldCapture,
     toggleNote:toggleCaptureNote,
-    ready: () => Boolean(currentUser && dataReady)
+    convertNote:convertCaptureNote,
+    ready: () => Boolean(currentUser && dataReady),
+    adminDue: () => { try { if (!currentUser || !administration.start) return null; administration.start(); return administration.isReady() ? administration.dueSoon() : null; } catch (error) { console.warn(error); return null; } },
+    openAdmin: id => { document.querySelector('.nav-item[data-page="administration"]')?.click(); if (id) setTimeout(() => administration.openDetail(id), 120); }
 });
 window.dispatchEvent(new Event('yao:rendered'));

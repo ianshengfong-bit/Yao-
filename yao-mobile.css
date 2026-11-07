@@ -1,0 +1,200 @@
+/* YAO 2026-11 手機版整理（最後載入）
+   原則：簡單、乾淨、一眼看得到更多事情。
+   - 行政清單：不再「方塊套方塊」，改成一整塊清單、每件事之間一條細線。
+   - 每件事兩行：標題＋（日期・狀態・送交・案場），高度約減半。
+   - 標籤顏色跟著日間／夜間主題，不再在黑底上出現淺色色塊。 */
+@media (max-width: 819px) {
+  /* ---------- 工程行政清單 ---------- */
+  html:root body .admin-task-list{
+    gap:0!important;
+    background:var(--t-surface)!important;
+    border:1px solid var(--t-line)!important;
+    border-radius:14px!important;
+    box-shadow:none!important;
+    overflow:hidden;
+  }
+  html:root body .admin-task-row{
+    grid-template-columns:22px minmax(0,1fr) 28px!important;
+    gap:10px!important;
+    min-height:0!important;
+    padding:12px 8px 12px 12px!important;
+    border:0!important;
+    border-bottom:1px solid var(--t-line)!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    background:transparent!important;
+  }
+  html:root body .admin-task-row:last-child{border-bottom:0!important}
+  /* 逾期：用左邊一條細紅線提示就好 */
+  html:root body .admin-task-row.admin-task-overdue{box-shadow:inset 3px 0 0 var(--t-late)!important}
+  html:root body .admin-row-main{min-height:0!important}
+  html:root body .admin-row-main strong{
+    font-size:15px!important;line-height:1.4!important;font-weight:600!important;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  /* 日期、狀態、送交、案場排成同一行 */
+  html:root body .admin-row-main > .admin-row-mobile-meta{
+    margin-top:4px!important;gap:4px 8px!important;font-size:12px!important;color:var(--t-muted)!important;
+  }
+  html:root body .admin-mobile-due{flex-basis:auto!important;font-size:12px!important}
+  html:root body .admin-mobile-due em{background:transparent!important;padding:0 0 0 2px!important;font-size:12px!important}
+  html:root body .admin-mobile-due.admin-overdue{color:var(--t-late)!important}
+  html:root body .admin-mobile-due.admin-soon,html:root body .admin-mobile-due.admin-week{color:var(--t-warn)!important}
+  html:root body .admin-mobile-status{
+    padding:0 6px!important;border-radius:4px!important;font-size:11px!important;line-height:18px!important;
+    background:var(--t-soft)!important;color:var(--t-muted)!important;
+  }
+  html:root body .admin-mobile-status.admin-state-1{background:var(--t-accent-soft)!important;color:var(--t-accent)!important}
+  html:root body .admin-mobile-status.admin-state-returned{background:var(--t-late-soft)!important;color:var(--t-late)!important}
+  html:root body .admin-mobile-status:is(.admin-state-4,.admin-state-approved){background:var(--t-done-soft)!important;color:var(--t-done)!important}
+  html:root body .admin-row-main > .admin-mobile-task-project{
+    display:inline!important;margin:0!important;font-size:12px!important;color:var(--t-faint)!important;
+  }
+  html:root body .admin-row-main > .admin-row-mobile-meta + .admin-mobile-task-project{margin-top:2px!important}
+  html:root body .admin-mobile-row-more{margin-top:-8px!important;color:var(--t-faint)!important}
+  html:root body .admin-complete{width:20px!important;height:20px!important;margin-top:1px!important}
+  /* 分組標題：小而清楚 */
+  html:root body .admin-group-title{padding:16px 4px 8px!important}
+  html:root body .admin-group-title h3{font-size:12px!important;color:var(--t-muted)!important}
+  html:root body .admin-group-title.admin-overdue h3{color:var(--t-late)!important}
+  html:root body .admin-future-link{background:transparent!important;border-color:var(--t-line)!important;color:var(--t-muted)!important}
+
+  /* ---------- 首頁（工務）清單也一致：細線分隔、不要一格一格 ---------- */
+  html:root body .field-recent #fieldRecentList{
+    background:var(--t-surface);border:1px solid var(--t-line);border-radius:14px;overflow:hidden;
+  }
+  html:root body .field-recent #fieldRecentList > .field-empty{border:0}
+  /* 隨手記存好後的「轉成工作」小列 */
+}
+
+/* 存成隨手記後，一鍵補日期轉成工作（手機、電腦都適用） */
+.field-convert{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--t-muted)}
+.field-convert > span{flex-basis:100%}
+.field-convert button,.field-convert select,.field-convert input{
+  min-height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--t-line);
+  background:var(--t-raised);color:var(--t-ink);font:inherit;font-size:13px;
+}
+.field-convert button.primary{background:var(--t-accent);border-color:var(--t-accent);color:var(--t-on-accent);font-weight:600}
+.field-convert select{max-width:100%}
+.field-convert .field-convert-skip{background:transparent;border-color:transparent;color:var(--t-faint)}
+
+/* 小清單：一項一項可點「已備好」 */
+.field-checklist{list-style:none;margin:8px 0 2px;padding:0;display:grid;gap:2px}
+.field-tick{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:4px 6px;border:0;border-radius:8px;background:transparent;color:var(--t-ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.field-tick:hover{background:var(--t-soft)}
+.field-tick > span{flex:0 0 20px;height:20px;border-radius:6px;border:1.5px solid var(--t-line-strong);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--t-on-accent)}
+.field-tick.is-on{color:var(--t-muted);text-decoration:line-through}
+.field-tick.is-on > span{background:var(--t-done);border-color:var(--t-done);color:#fff}
+.field-ready{color:var(--t-warn)}
+.field-ready.is-all{color:var(--t-done)}
+
+/* 首頁「工程行政」入口：做成一整格可點的列，不再半截卡在底部導覽上 */
+html:root body .field-admin-link{
+  display:flex!important;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  padding:14px 16px!important;border:1px solid var(--t-line)!important;border-radius:14px!important;
+  background:var(--t-surface)!important;cursor:pointer;text-align:left;
+}
+html:root body .field-admin-link > span{font-size:15px!important;font-weight:600}
+html:root body .field-admin-link small{font-size:12px!important;color:var(--t-muted)!important}
+/* 底部導覽列在 900px 以下都會出現，內容要留出空間 */
+@media (max-width: 900px){
+  body.yao-next #system .main{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+}
+
+/* 編輯視窗：小清單 */
+.item-checklist-editor{display:grid;gap:8px;margin:4px 0 14px;padding:12px;border:1px solid var(--t-line);border-radius:12px;background:var(--t-raised)}
+.item-checklist-editor .ice-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.item-checklist-editor .ice-head strong{font-size:14px}
+.item-checklist-editor .ice-head small{color:var(--t-muted);font-size:12px;flex:1}
+.item-checklist-editor .ice-head button,.item-checklist-editor .ice-add{border:0;background:none;color:var(--t-accent);font:inherit;font-size:13px;cursor:pointer;padding:6px 0}
+.item-checklist-editor .ice-add{justify-self:start}
+.item-checklist-editor ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.item-checklist-editor ul:empty{display:none}
+.item-checklist-editor li{display:flex;align-items:center;gap:8px}
+.item-checklist-editor li input[type=checkbox]{width:20px;height:20px;flex:0 0 20px;margin:0;accent-color:var(--t-done)}
+.item-checklist-editor li input[type=text]{flex:1;min-width:0;min-height:40px;padding:0 10px;border:1px solid var(--t-line);border-radius:8px;background:var(--t-surface);color:var(--t-ink);font:inherit;font-size:15px}
+.item-checklist-editor li button{flex:0 0 36px;height:36px;border:0;border-radius:8px;background:none;color:var(--t-faint);font-size:15px;cursor:pointer}
+
+/* 常用工務：四格縮成一列高度剛好的小按鈕 */
+@media (max-width: 900px){
+  html:root body .field-tool-grid{gap:8px!important}
+  html:root body .field-tool-grid button{min-height:52px!important;height:auto!important;padding:10px 14px!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:10px!important;border-radius:12px!important}
+  html:root body .field-tool-grid button strong{font-size:14px!important}
+}
+
+/* ---------- 首頁：行政／現場 兩區，用小標籤分顏色，不混在一起 ---------- */
+html:root body{--t-admin:#3b6fd8;--t-admin-soft:#e8effc}
+html:root body[data-yao-theme=dark]{--t-admin:#7ea6ff;--t-admin-soft:#1c2740}
+.field-area-head{display:flex;align-items:center;gap:8px;margin:4px 2px 8px}
+.field-area-head small{flex:1;color:var(--t-muted);font-size:12px}
+.field-area-head button{border:0;background:none;color:var(--t-muted);font:inherit;font-size:12px;cursor:pointer;padding:6px 0}
+.field-area-tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em}
+.field-area-tag.is-field{background:var(--t-accent-soft);color:var(--t-accent)}
+.field-area-tag.is-admin{background:var(--t-admin-soft);color:var(--t-admin)}
+.field-admin-today{margin:0 0 18px}
+.field-admin-today ul{list-style:none;margin:0;padding:0;background:var(--t-surface);border:1px solid var(--t-line);border-left:3px solid var(--t-admin);border-radius:12px;overflow:hidden}
+.field-admin-today li + li{border-top:1px solid var(--t-line)}
+.field-admin-today li button{display:grid;gap:3px;width:100%;padding:10px 12px;border:0;background:none;color:var(--t-ink);font:inherit;text-align:left;cursor:pointer}
+.field-admin-today li button:hover{background:var(--t-raised)}
+.field-admin-title{font-size:15px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.field-admin-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--t-muted)}
+.field-admin-meta b{font-weight:600;color:var(--t-warn)}
+.field-admin-meta b.is-late{color:var(--t-late)}
+.field-admin-meta b.is-today{color:var(--t-accent)}
+.field-admin-more{margin-top:6px;border:0;background:none;color:var(--t-admin);font:inherit;font-size:13px;cursor:pointer;padding:4px 2px}
+
+/* 輸入框旁的「貼上」：從 LINE 複製後一按就貼進來 */
+.field-paste{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid var(--t-line);border-radius:10px;background:var(--t-raised);color:var(--t-muted);font:inherit;font-size:13px;cursor:pointer}
+.field-paste:active{background:var(--t-soft)}
+
+/* ---------- 新增／編輯表單 ---------- */
+.item-form-v2 > label,.item-form-v2 .form-grid{margin-bottom:14px}
+.item-form-v2 #itemTitle{font-size:16px;font-weight:600}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip-row:empty{display:none}
+.chip-row button{min-height:36px;padding:0 14px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-surface);color:var(--t-ink);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.chip-row button.on{background:var(--t-ink);border-color:var(--t-ink);color:var(--t-surface)}
+#itemDateChips{margin:0 0 8px}
+.item-more{margin:2px 0 14px;border:1px solid var(--t-line);border-radius:12px;background:var(--t-raised)}
+.item-more > summary{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;list-style:none;font-size:14px;font-weight:600}
+.item-more > summary::-webkit-details-marker{display:none}
+.item-more > summary small{color:var(--t-muted);font-weight:400;font-size:12px;flex:1}
+.item-more > summary::after{content:'⌄';color:var(--t-muted)}
+.item-more[open] > summary::after{content:'⌃'}
+.item-more-body{padding:0 14px 6px}
+.item-more-body > label{margin-bottom:12px}
+
+/* ---------- 配色規則 ----------
+   橘色：只給主要按鈕（記下、新增、儲存）
+   紅色：逾期　黃色：快到期／還沒備好　綠色：完成／已存好　藍色：行政　灰色：其他 */
+html:root body .field-save-message{color:var(--t-done)!important;font-weight:500}
+html:root body .field-save-message:not(.is-error)::before{content:'✓ '}
+html:root body .field-save-message.is-error{color:var(--t-late)!important}
+html:root body .field-row-meta span{color:var(--t-muted)}
+/* 日間模式：背景稍微暖一點、線條淡一點，比較不刺眼 */
+html:root body:not([data-yao-theme=dark]){--t-bg:#f5f5f3;--t-line:#e6e6e2;--t-raised:#fafaf8;--t-soft:#efefeb}
+html:root body .field-row-meta span.field-ready{color:var(--t-warn)}
+html:root body .field-row-meta span.field-ready.is-all{color:var(--t-done)}
+.item-form-v2 #projectHint{display:none}
+.item-form-v2 #itemType{display:none}
+.item-form-v2 .form-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+.item-form-v2 .form-grid label{margin:0!important;min-width:0}
+.item-form-v2 .form-grid input{min-width:0;width:100%}
+/* 沒有清單項目時只顯示一行「＋ 加小清單」 */
+.item-checklist-editor:has(ul:empty){padding:0;border:0;background:none;margin:-6px 0 12px}
+.item-checklist-editor:has(ul:empty) .ice-head{display:none}
+.item-checklist-editor:has(ul:empty) .ice-add::before{content:''}
+
+/* 行政頁：回到現場的按鈕（上方小按鈕＋底部第一格） */
+.admin-back-field{margin-left:auto;margin-right:8px;min-height:36px;padding:0 12px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-surface);color:var(--t-accent);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.admin-mobile-header{align-items:center}
+html:root body .admin-mobile-add nav .admin-go-field{color:var(--t-accent)}
+.admin-go-field-mark{font-size:18px;line-height:1}
+@media (min-width: 901px){.admin-back-field{display:none}}
+
+/* 769～900 寬度：行政頁用的是電腦版排版、側邊選單又收起來了，會沒有路回去。
+   這個寬度在行政頁也顯示底部導覽列（總覽、工作紀錄…），上方再放一個「‹ 現場」。 */
+@media (min-width: 769px) and (max-width: 900px){
+  body.yao-next:not(.yao-next-field) .next-mobile-nav{display:grid!important}
+  body.yao-next:not(.yao-next-field) #system .main{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+}

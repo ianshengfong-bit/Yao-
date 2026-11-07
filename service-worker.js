@@ -1,22 +1,24 @@
-const CACHE_NAME = "yao-workspace-20261031-list-3";
+const CACHE_NAME = "yao-workspace-20261107-4";
 
 const FILES_TO_CACHE = [
     "./",
     "./index.html",
     "./style.css",
-    "./app.js?v=20261031-list-3",
-    "./workspace.js?v=20261031-list-3",
+    "./app.js?v=20261107-4",
+    "./workspace.js?v=20261107-4",
     "./workspace.css",
-    "./workspace-refresh.css?v=20261031-list-3",
+    "./workspace-refresh.css?v=20261107-4",
     "./capture-date.js",
     "./capture-plan.js",
     "./capture-store.js",
     "./capture-view.js",
     "./swipe.js",
-    "./yao-theme.css?v=20261031-list-3",
+    "./item-form.js",
+    "./yao-theme.css?v=20261107-4",
+    "./yao-mobile.css?v=20261107-4",
     "./field-views.js",
     "./smart-entry.js",
-    "./admin.js?v=20261022-jade-2",
+    "./admin.js?v=20261107-4",
     "./admin-status.js",
     "./admin-dom.js",
     "./admin-core.js",
@@ -24,7 +26,9 @@ const FILES_TO_CACHE = [
     "./admin-store.js",
     "./admin.css",
     "./manifest.json",
-    "./icon.svg"
+    "./icon.svg",
+    "./icon-512.png",
+    "./apple-touch-icon.png"
 ];
 
 /* =========================================

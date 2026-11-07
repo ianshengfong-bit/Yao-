@@ -136,7 +136,7 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
         try { projectId = localStorage.getItem(`yao-admin-project:${uid}`) || 'all'; } catch {}
         store = getStore(uid);
         const token = epoch;
-        const refresh = () => { updateBadge(); if (isActive()) render(); };
+        const refresh = () => { updateBadge(); if (isActive()) render(); window.dispatchEvent(new Event('yao:admin-changed')); };
         stop = store.subscribe(list => {
             if (token !== epoch) return;
             statusUpdates.receive(list); tasks = statusUpdates.tasks(); tasksReady = true; refresh();
@@ -299,10 +299,10 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
     function mobileChrome() {
         const viewName = VIEWS.find(([key]) => key === tab)?.[1] || '待辦';
         const addAction = tab === 'reviews' ? 'new-review' : tab === 'recurring' ? 'new-recurring' : 'new';
-        return `<header class="admin-mobile-header"><div class="admin-mobile-brand"><span class="admin-brand-mark">${icon('file')}</span><div><span>YAO · ${pretty(todayISO()).slice(5)} 週${WEEKDAYS[new Date(`${todayISO()}T00:00:00Z`).getUTCDay()]}</span><h1>行政工作台</h1></div></div><div><button data-admin="mobile-search" aria-label="${mobileSearchOpen ? '收起搜尋' : '搜尋工作'}" aria-expanded="${mobileSearchOpen}">${mobileIcon('search')}</button><button data-admin="mobile-nav" aria-label="YAO 選單">${mobileIcon('menu')}</button></div></header>
+        return `<header class="admin-mobile-header"><div class="admin-mobile-brand"><span class="admin-brand-mark">${icon('file')}</span><div><span>YAO · ${pretty(todayISO()).slice(5)} 週${WEEKDAYS[new Date(`${todayISO()}T00:00:00Z`).getUTCDay()]}</span><h1>行政工作台</h1></div></div><button type="button" data-go-field class="admin-back-field">‹ 現場</button><div><button data-admin="mobile-search" aria-label="${mobileSearchOpen ? '收起搜尋' : '搜尋工作'}" aria-expanded="${mobileSearchOpen}">${mobileIcon('search')}</button><button data-admin="mobile-nav" aria-label="YAO 選單">${mobileIcon('menu')}</button></div></header>
         ${mobileSearchOpen || getSearch().trim() ? `<div class="admin-mobile-search"><input id="adminMobileSearch" type="search" aria-label="搜尋行政工作" placeholder="搜尋工作或案場" value="${e(getSearch())}"><button data-admin="mobile-search-clear" aria-label="清除並收起搜尋">×</button></div>` : ''}
         <div class="admin-mobile-context"><button data-admin="mobile-projects" aria-label="切換案場：${projectId === 'all' ? '全部案場' : e(projectName(projectId))}"><span class="admin-project-symbol">${icon('grid')}</span><span class="admin-mobile-project-name"><small>目前案場</small><strong>${projectId === 'all' ? '全部案場' : e(projectName(projectId))}</strong></span>${mobileIcon('down')}</button><button data-admin="mobile-views" aria-label="行政功能：${viewName}">更多${mobileIcon('down')}</button></div>
-        ${tasksReady && templatesReady && !error && getProjects().some(p => !p.archived) ? `<div class="admin-mobile-add"><nav aria-label="行政常用功能">${[['overview','待辦','grid'],['calendar','月曆','calendar'],['reviews','送審','file']].map(([key,label,glyph]) => `<button data-admin="tab" data-tab="${key}" class="${tab === key ? 'is-active' : ''}" aria-pressed="${tab === key}">${icon(glyph)}<span>${label}</span></button>`).join('')}</nav><button class="admin-mobile-create" data-admin="${addAction}" aria-label="${tab === 'reviews' ? '新增送審' : tab === 'recurring' ? '新增固定事項' : '新增工作'}" data-date="${tab === 'calendar' ? selectedDate : todayISO()}" ${projectId !== 'all' && chosenProject()?.archived ? 'disabled' : ''}>${icon('plus')}<span>新增</span></button></div>` : ''}`;
+        ${tasksReady && templatesReady && !error && getProjects().some(p => !p.archived) ? `<div class="admin-mobile-add"><nav aria-label="行政常用功能"><button type="button" data-go-field class="admin-go-field" aria-label="回到現場（工務首頁）"><span class="admin-go-field-mark">◈</span><span>回現場</span></button>${[['overview','待辦','grid'],['calendar','月曆','calendar'],['reviews','送審','file']].map(([key,label,glyph]) => `<button data-admin="tab" data-tab="${key}" class="${tab === key ? 'is-active' : ''}" aria-pressed="${tab === key}">${icon(glyph)}<span>${label}</span></button>`).join('')}</nav><button class="admin-mobile-create" data-admin="${addAction}" aria-label="${tab === 'reviews' ? '新增送審' : tab === 'recurring' ? '新增固定事項' : '新增工作'}" data-date="${tab === 'calendar' ? selectedDate : todayISO()}" ${projectId !== 'all' && chosenProject()?.archived ? 'disabled' : ''}>${icon('plus')}<span>新增</span></button></div>` : ''}`;
     }
     function mobileMenu(kind) {
         dialogKind = kind; dialogId = '';
@@ -587,6 +587,15 @@ export function createAdministration({getUser, getProjects, getSearch, isActive,
     document.addEventListener('visibilitychange',() => { if (document.visibilityState === 'visible') { refreshDate(); if (uid) scheduleGeneration(); } });
     window.addEventListener('online',() => { if (uid) scheduleGeneration(); });
     setInterval(refreshDate,60000);
-    return {render, openNew, reset, onProjectsChanged() { updateBadge(); if (isActive()) render(); if (uid) scheduleGeneration(); }};
+    // 給首頁用：只讀，列出逾期＋今天＋明天還沒完成的行政事項。
+    function dueSoon() {
+        const t = new Date(); t.setDate(t.getDate()+1);
+        const tomorrow = todayISO(t);
+        return tasks.filter(x => !x.archived && x.status !== '已完成' && x.date && x.date <= tomorrow)
+            .sort((a,b) => a.date.localeCompare(b.date))
+            .map(x => ({id:x.id, title:x.title, date:x.date, status:x.status, recipient:x.recipient, projectId:x.projectId, isSubmission:!!x.isSubmission}));
+    }
+    function openDetail(id) { projectId = 'all'; detail(id); }
+    return {render, openNew, reset, start:ensureStarted, dueSoon, isReady:() => tasksReady, openDetail, onProjectsChanged() { updateBadge(); if (isActive()) render(); if (uid) scheduleGeneration(); }};
 }
 

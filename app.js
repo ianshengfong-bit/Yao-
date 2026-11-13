@@ -40,7 +40,7 @@ import {
 import {capturePlan} from './capture-plan.js';
 import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist,frequentThings} from './field-views.js';
 
-import {createAdministration} from "./admin.js?v=20261113-3";
+import {createAdministration} from "./admin.js?v=20261113-4";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 

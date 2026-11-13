@@ -1,5 +1,5 @@
 import {telegramSchedule} from './reminder-core.js';
-import {collection, doc, onSnapshot, runTransaction} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import {collection, doc, onSnapshot, runTransaction, deleteDoc} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 import {changeTask, historyEntry, makeOccurrence, occurrenceKeys, occurrenceId, validateTask, frequencyOf, recurrenceLabel, weekRange} from './admin-core.js';
 
 // All new writes are confined to these two user-scoped collections.
@@ -12,7 +12,7 @@ export function createAdminStore(db, uid) {
                 onSnapshot(tasks, {includeMetadataChanges:true}, snap => {
                     // An unconfirmed local write must not become the rollback
                     // baseline. The metadata event delivers it after approval.
-                    if (!snap.metadata.hasPendingWrites) onTasks(snap.docs.map(d => ({...d.data(), id:d.id})));
+                    if (!snap.metadata.hasPendingWrites) onTasks(snap.docs.map(d => ({...d.data(), id:d.id})).filter(t => !t.deleted));
                 }, onError),
                 onSnapshot(templates, snap => onTemplates(snap.docs.map(d => ({...d.data(), id:d.id}))), onError)
             ];
@@ -47,6 +47,17 @@ export function createAdminStore(db, uid) {
                 }
             });
             return ref.id;
+        },
+        // 刪除：單次事項直接刪掉；固定排程產生的事項改成「已刪除」隱藏，
+        // 否則下次開網站時排程會以為少了這一筆又重新產生。
+        async remove(id) {
+            const ref = doc(tasks, id);
+            await runTransaction(db, async tx => {
+                const snap = await tx.get(ref);
+                if (!snap.exists()) return;
+                if (snap.data().recurringId) tx.update(ref, {archived:true, deleted:true, updatedAt:Date.now()});
+                else tx.delete(ref);
+            });
         },
         async mutate(id, action, payload = {}) {
             const ref = doc(tasks, id);

@@ -233,3 +233,17 @@ body:has(#yaoAuthExpired) #system{padding-top:76px}
 .field-thing:active,.ice-things button:active{background:var(--t-soft)}
 .ice-things{margin-top:2px}
 .item-checklist-editor:has(ul:empty) .ice-things{display:none}
+
+/* 行政：刪除用紅字，跟其他按鈕分開 */
+html:root body .admin-modal .btn.admin-delete{color:var(--t-late)!important;border-color:transparent!important;background:transparent!important}
+html:root body .admin-sheet-list .admin-sheet-delete{color:var(--t-late)!important}
+
+/* 行政頁：拿掉說明小字，讓按鈕自己說明（跟現場那邊一致） */
+html:root body .admin-section-head p.muted,
+html:root body .admin-section-head span.muted,
+html:root body .admin-stat-hint,
+html:root body .admin-tip,
+html:root body .admin-shortcuts button small,
+html:root body .admin-schedule-help,
+html:root body .admin-heading p:empty{display:none!important}
+html:root body .admin-range-description > span:first-child{display:none}

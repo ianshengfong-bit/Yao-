@@ -208,3 +208,28 @@ html:root body .admin-mobile-add nav .admin-go-field{color:var(--t-accent)}
 #itemModal .modal-actions:has(.item-delete-btn[hidden]){grid-template-columns:1fr 1.4fr}
 #itemModal .modal-actions .btn{width:100%;margin:0}
 #itemModal .item-delete-btn{padding:0 14px;width:auto!important}
+
+/* 夜間模式：行政事項視窗原本底色寫死白色，改跟主題 */
+html:root body .modal.admin-modal{background:var(--t-surface)!important;color:var(--t-ink)!important}
+html:root body .modal.admin-modal .icon-btn{color:var(--t-muted)!important}
+
+/* 登入過期提示 */
+.yao-auth-expired{position:fixed;top:0;left:0;right:0;z-index:2000;padding-top:calc(12px + env(safe-area-inset-top))!important;box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--t-late);color:#fff;font-size:14px;line-height:1.45}
+.yao-auth-expired div{flex:1;display:grid;gap:2px}
+.yao-auth-expired span{font-size:12px;opacity:.92}
+.yao-auth-expired button{flex:0 0 auto;min-height:40px;padding:0 14px;border:0;border-radius:10px;background:#fff;color:var(--t-late);font:inherit;font-weight:700;cursor:pointer}
+
+body:has(#yaoAuthExpired) #system{padding-top:76px}
+
+/* 不放說明小字，讓按鈕自己說明用途 */
+.item-form-v2 .item-more-body .form-hint{display:none!important}
+.field-convert{margin-top:6px}
+
+/* 常帶的東西：小按鈕，點一下加入 */
+.field-things,.ice-things{display:flex;flex-wrap:wrap;gap:6px}
+.field-things:empty{display:none}
+.field-things{margin:2px 0 8px}
+.field-thing,.ice-things button{min-height:32px;padding:0 10px;border:1px dashed var(--t-line-strong);border-radius:999px;background:transparent;color:var(--t-ink);font:inherit;font-size:13px;cursor:pointer}
+.field-thing:active,.ice-things button:active{background:var(--t-soft)}
+.ice-things{margin-top:2px}
+.item-checklist-editor:has(ul:empty) .ice-things{display:none}

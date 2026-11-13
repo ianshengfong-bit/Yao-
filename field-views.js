@@ -7,24 +7,29 @@ export function recentOrder(a,b) {
 
 /* ---- 工務列表共用：首頁與工作紀錄用同一種兩行卡片、篩選列與復原列 ---- */
 export const localDay = (d = new Date()) => [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+export const nextDay = (today = localDay()) => { const d=new Date(today+'T12:00:00'); d.setDate(d.getDate()+1); return localDay(d); };
+// 傍晚 5 點以後，首頁預設看「明天」：你通常前一晚安排隔天要去哪、帶什麼。
+export const isEvening = (now = new Date()) => now.getHours() >= 17;
 export const isLateRow = (r,today = localDay()) => !r.done && Boolean(r.date) && r.date < today;
 export function rowCounts(rows,today = localDay()) {
     const open=rows.filter(r=>!r.done);
-    return {open:open.length,today:open.filter(r=>r.date===today).length,late:open.filter(r=>isLateRow(r,today)).length,done:rows.length-open.length,all:rows.length};
+    const tm=nextDay(today);
+    return {open:open.length,today:open.filter(r=>r.date===today).length,tomorrow:open.filter(r=>r.date===tm).length,late:open.filter(r=>isLateRow(r,today)).length,done:rows.length-open.length,all:rows.length};
 }
 const LEGACY = {active:'open',recent:'all'};
-export const normalizeFilter = f => LEGACY[f] || (['open','today','late','done','all'].includes(f) ? f : 'all');
+export const normalizeFilter = f => LEGACY[f] || (['open','today','tomorrow','late','done','all'].includes(f) ? f : 'all');
 // 未完成類：照日期（逾期在最前、沒日期的在最後）；已完成／全部：未完成在前，再照新舊。
 export function pickRows(rows,filter,today = localDay()) {
     const f=normalizeFilter(filter);
-    const pick={open:r=>!r.done,today:r=>!r.done&&r.date===today,late:r=>isLateRow(r,today),done:r=>r.done,all:()=>true}[f];
+    const tm=nextDay(today);
+    const pick={open:r=>!r.done,today:r=>!r.done&&r.date===today,tomorrow:r=>!r.done&&r.date===tm,late:r=>isLateRow(r,today),done:r=>r.done,all:()=>true}[f];
     const byDate=(a,b)=>(a.date||'9999').localeCompare(b.date||'9999')||(a.time||'').localeCompare(b.time||'')||recentOrder(a,b);
     const byRecent=(a,b)=>Number(Boolean(a.done))-Number(Boolean(b.done))||recentOrder(a,b);
     return rows.filter(pick).sort(f==='done'||f==='all'?byRecent:byDate);
 }
 export function filterStrip(counts,filter,attr,extra = '') {
     const f=normalizeFilter(filter);
-    return `<div class="field-strip" role="group" aria-label="篩選紀錄">${[['open','未完成'],['today','今天'],['late','逾期'],['done','已完成'],['all','全部']].filter(([v])=>v!=='late'||counts.late||f==='late').map(([v,n])=>`<button type="button" ${attr}="${v}" aria-pressed="${f===v}"${v==='late'?' class="is-late"':''}>${n}<b>${counts[v]}</b></button>`).join('')}${extra}</div>`;
+    return `<div class="field-strip" role="group" aria-label="篩選紀錄">${[['open','未完成'],['today','今天'],['tomorrow','明天'],['late','逾期'],['done','已完成'],['all','全部']].filter(([v])=>(v!=='late'||counts.late||f==='late')&&(v!=='tomorrow'||counts.tomorrow||f==='tomorrow'||isEvening())).map(([v,n])=>`<button type="button" ${attr}="${v}" aria-pressed="${f===v}"${v==='late'?' class="is-late"':''}>${n}<b>${counts[v]}</b></button>`).join('')}${extra}</div>`;
 }
 /* 一筆打很多樣東西時，自動拆成小清單。
    只用明確的分隔：以及、還有、、，,；;＋+、換行、「 和 」「 跟 」（前後要有空白）。
@@ -39,6 +44,29 @@ export function splitChecklist(text,project = '') {
 }
 // 有自己編過的清單就用自己的；沒有才從標題自動拆。
 export const rowChecklist = (r,project = '') => Array.isArray(r.checklist) ? r.checklist.filter(Boolean) : splitChecklist(r.title,project);
+/* 常帶的東西：從你以前所有的小清單統計出現次數，最常用的排前面。
+   去掉數量（×3、2組…）只留品名，例如「砂輪機」「鐵鎚」「安全帶」。 */
+export const baseThing = (text,names = []) => {
+    let t=String(text||'').trim();
+    t=t.replace(/^(?:.*\s)?(帶|載|拿|準備|買)(?=\S)/,'');
+    t=t.replace(/^(明天|今天|後天|大後天|下週.|週.)?\s*(去|到|在)\S*\s+/,'');
+    for(const n of names)if(n&&t.startsWith(n+' ')){t=t.slice(n.length).trim();break}
+    t=t.replace(/\s*(好多支|好多|很多|一些|等等)$/,'');
+    t=t.replace(/\s*[×xX*＊]\s*\d+\s*$/,'').replace(/\s*\d+\s*(支|個|組|張|顆|台|隻|條|包|箱|捲|片|把|件|套)\s*$/,'').replace(/(一|兩|二|三|四|五)(支|個|組|張|顆|台|隻|條|包|箱|捲|片|把|件|套)$/,'');
+    return t.trim();
+};
+// 只留「東西」：短品名，排除文書、流程、時間類的字。
+export const looksLikeThing = name => name.length>=2 && name.length<=8 && !/^\d+$/.test(name) && !/[：:？?！!。]/.test(name)
+    && !/流程|準備|資料|報告|進度|送審|送管|管制|整理|確認|等老闆|老闆|聯絡|回報|查驗|會議|開會|明天|今天|後天|週.|星期|上午|下午|早上|晚上|日誌|函文|計畫|申請|設備$/.test(name)
+    && (name.match(/\s/g)||[]).length<=1;
+export function frequentThings(rows,projectNameOf = () => '',limit = 10,projectNames = []) {
+    const count=new Map(),names=[...new Set(projectNames.flatMap(n=>[n,...String(n||'').split(/[及與和、/\s-]+/)]).filter(n=>n&&n.length>=2))].sort((a,b)=>b.length-a.length);
+    for(const r of rows){
+        const list=rowChecklist({...r,title:r.title||r.text||''},projectNameOf(r.projectId));
+        for(const raw of list){const name=baseThing(raw,names);if(!looksLikeThing(name))continue;const c=count.get(name)||{n:0,last:0};c.n++;c.last=Math.max(c.last,Number(r.createdAt)||0);count.set(name,c)}
+    }
+    return [...count].filter(([,c])=>c.n>=1).sort((a,b)=>b[1].n-a[1].n||b[1].last-a[1].last).slice(0,limit).map(([name])=>name);
+}
 const shortDate = date => date ? date.slice(5).replace('-','/') : '';
 /* r: {id,title,done,date,time,reminderRequest}; opts.check 是完成按鈕的屬性字串，opts.actions 是展開後的按鈕 HTML。 */
 export function rowCard(r,opts) {

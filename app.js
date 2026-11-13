@@ -38,9 +38,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
 import {capturePlan} from './capture-plan.js';
-import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist} from './field-views.js';
+import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist,frequentThings} from './field-views.js';
 
-import {createAdministration} from "./admin.js?v=20261113-1";
+import {createAdministration} from "./admin.js?v=20261113-3";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 
@@ -108,6 +108,23 @@ function quickWrite(promise,label='資料'){
     let late=false;
     promise.catch(error=>{if(late){console.error(error);toast(label+'沒有同步到雲端，請確認網路後再試一次')}});
     return Promise.race([promise,new Promise(resolve=>setTimeout(()=>{late=true;resolve()},800))]);
+}
+
+// 登入過期（雲端拒絕讀取）時，畫面上顯示的只是電腦／手機裡的舊副本。
+// 明確提示重新登入，避免在這裡新增的資料沒有同步上雲端。
+function syncDenied(error) {
+    if (!['permission-denied','unauthenticated'].includes(error?.code)) return;
+    if (document.getElementById('yaoAuthExpired')) return;
+    const bar = document.createElement('div');
+    bar.id = 'yaoAuthExpired';
+    bar.className = 'yao-auth-expired';
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<div><strong>登入已過期，資料沒有在同步</strong><span>目前看到的是這台裝置存的舊資料，新增或修改不會存到雲端。請重新登入。</span></div><button type="button">重新登入</button>';
+    bar.querySelector('button').addEventListener('click', async () => {
+        try { await signOut(auth); } catch (e) { console.error(e); }
+        location.reload();
+    });
+    document.body.append(bar);
 }
 /* =========================================================
 全域狀態
@@ -1390,6 +1407,7 @@ async function startRealtimeData() {
                     "案場同步失敗:",
                     error
                 );
+                syncDenied(error);
 
                 toast(
                     "案場資料讀取失敗"
@@ -1434,6 +1452,7 @@ async function startRealtimeData() {
                     "工作同步失敗:",
                     error
                 );
+                syncDenied(error);
 
                 toast(
                     "工作資料讀取失敗"
@@ -1475,7 +1494,7 @@ async function startRealtimeData() {
 },
 
             error => {
-                console.error("待整理同步失敗:", error);
+                console.error("待整理同步失敗:", error); syncDenied(error);
                 toast("待整理資料讀取失敗");
             }
         );
@@ -7544,9 +7563,10 @@ function loadChecklistEditor(id) {
 function drawChecklistEditor() {
     const box = document.getElementById('itemChecklistEditor');
     if (!box) return;
-    box.innerHTML = `<div class="ice-head"><strong>小清單</strong><small>一項一項，可勾「已備好」</small><button type="button" data-ice="split">從標題自動拆</button></div>
+    box.innerHTML = `<div class="ice-head"><strong>小清單</strong><small></small><button type="button" data-ice="split">從標題拆開</button></div>
     <ul>${checklistDraft.map((r,i)=>`<li><input type="checkbox" data-ice-on="${i}" ${r.on?'checked':''} aria-label="已備好"><input type="text" data-ice-text="${i}" value="${esc(r.text)}" placeholder="例如：泵浦啟動燈 ×3"><button type="button" data-ice-del="${i}" aria-label="刪除這項">✕</button></li>`).join('')}</ul>
-    <button type="button" class="ice-add" data-ice="add">${checklistDraft.length?'＋ 新增一項':'＋ 加小清單（一項一項勾「已備好」）'}</button>`;
+    ${(()=>{const have=new Set(checklistDraft.map(r=>String(r.text).trim()));const list=frequentThings([...items,...inboxNotes.map(n=>({...n,title:n.text}))],id=>getProject(id)?.name||'',16,projects.map(p=>p.name)).filter(t=>![...have].some(h=>h.includes(t))).slice(0,10);return list.length?`<div class="ice-things">${list.map(t=>`<button type="button" data-ice-thing="${esc(t)}">＋${esc(t)}</button>`).join('')}</div>`:''})()}
+    <button type="button" class="ice-add" data-ice="add">${checklistDraft.length?'＋ 新增一項':'＋ 小清單'}</button>`;
 }
 function readChecklistEditor() {
     const kept = checklistDraft.map(r=>({text:String(r.text||'').trim(),on:r.on})).filter(r=>r.text);
@@ -7557,6 +7577,7 @@ document.addEventListener('change', e=>{const i=e.target.dataset?.iceOn;if(i!==u
 document.addEventListener('click', e=>{
     const b=e.target.closest?.('#itemChecklistEditor button');if(!b)return;
     e.preventDefault();
+    if (b.dataset.iceThing) { const empty=checklistDraft.findIndex(r=>!String(r.text).trim()); if(empty>=0) checklistDraft[empty].text=b.dataset.iceThing; else checklistDraft.push({text:b.dataset.iceThing,on:false}); drawChecklistEditor(); return; }
     if (b.dataset.ice==='add') { checklistDraft.push({text:'',on:false}); drawChecklistEditor(); document.querySelector(`[data-ice-text="${checklistDraft.length-1}"]`)?.focus(); }
     else if (b.dataset.ice==='split') { const project=getProject(document.getElementById('itemProject')?.value)?.name||''; const old=new Map(checklistDraft.map(r=>[r.text,r.on])); checklistDraft=splitChecklist(document.getElementById('itemTitle')?.value||'',project).map(text=>({text,on:Boolean(old.get(text))})); if(!checklistDraft.length)toast('標題裡沒有找到「以及、頓號、逗號」分開的項目'); drawChecklistEditor(); }
     else if (b.dataset.iceDel!==undefined) { checklistDraft.splice(Number(b.dataset.iceDel),1); drawChecklistEditor(); }

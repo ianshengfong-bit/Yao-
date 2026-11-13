@@ -31,7 +31,7 @@ export function enhanceItemForm() {
     const typeChips = document.createElement('div'); typeChips.className = 'chip-row'; typeChips.id = 'itemTypeChips';
 
     const more = document.createElement('details'); more.className = 'item-more';
-    more.innerHTML = '<summary><span>更多設定</span><small>備註、提醒</small></summary>';
+    more.innerHTML = '<summary><span>備註・提醒</span></summary>';
     const moreBody = document.createElement('div'); moreBody.className = 'item-more-body';
     more.append(moreBody);
     [note, reminder, oneHour, atTime].filter(Boolean).forEach(el => moreBody.append(el));

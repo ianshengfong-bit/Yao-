@@ -38,7 +38,7 @@ test('未完成列表包含未排日待辦與隨手記（隨手記也能直接�
 test('未完成依日期排：逾期在前、沒日期的在後',()=>{
  const today=localDay();const data=[{id:'a',title:'沒日期',date:'',done:false},{id:'b',title:'逾期',date:'2000-01-01',done:false},{id:'c',title:'今天',date:today,done:false}];
  assert.deepEqual(pickRows(data,'open',today).map(r=>r.title),['逾期','今天','沒日期']);
- assert.deepEqual(rowCounts(data,today),{open:3,today:1,late:1,done:0,all:3});
+ assert.deepEqual(rowCounts(data,today),{open:3,today:1,tomorrow:0,late:1,done:0,all:3});
 });
 test('分類修正需要真實案場和有效日期時間',()=>{
  const p=plan('要追蹤材料回覆',{changes:{projectId:'b',date:'2026-10-25'}});assert.equal(p.collection,'items');assert.equal(p.data.title,'要追蹤材料回覆');
@@ -54,4 +54,12 @@ test('列表預設包含已完成；案場聯絡資料可展開，沒有假工�
  const data=[{id:'1',title:'進行中',date:'2026-10-22',done:false,projectId:'b'},{id:'2',title:'已結束',date:'2026-10-21',done:true,projectId:'b'}];
  assert(fieldList(data,'工作紀錄',r=>r.title).includes('已結束'));assert(!fieldList(data,'工作紀錄',r=>'ROW:'+r.title,'active').includes('ROW:已結束'));
  const html=projectSummaryCard({...projects[1],note:'<img src=x>',address:'測試地址'},data,'2026-10-22');assert(html.includes('聯絡與案場資訊'));assert(html.includes('&lt;img'));assert(!html.includes('class="progress"'));assert(!html.includes('50%'));
+});
+
+test('明天篩選與常帶東西',async()=>{
+ const {pickRows,nextDay,frequentThings}=await import('../field-views.js');
+ const t='2026-11-13';assert.equal(nextDay(t),'2026-11-14');assert.equal(nextDay('2026-12-31'),'2027-01-01');
+ const rows=[{id:'a',title:'明天',date:'2026-11-14',done:false},{id:'b',title:'今天',date:t,done:false},{id:'c',title:'明天已完成',date:'2026-11-14',done:true}];
+ assert.deepEqual(pickRows(rows,'tomorrow',t).map(r=>r.id),['a']);
+ assert.deepEqual(frequentThings([{title:'明天去朴子 帶砂輪機、鐵鎚'},{title:'x',checklist:['鐵鎚 ×2','安全帶']}],()=>'',5,['朴子及麥寮']),['鐵鎚','砂輪機','安全帶']);
 });

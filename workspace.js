@@ -176,9 +176,19 @@ enhanceItemForm();
     if((!work||p!=='dashboard')&&next.isConnected){next.remove();next.dataset.built='';}
   }
 
-  function schedule(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;sync()});}
+  function schedule(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;sync();restoreScroll();savedScroll=null});}
   renderNavigation();setupMobileNavigation();syncTheme();sync();
   try{const want=new URLSearchParams(location.search).get('page');if(want){const go=()=>{const b=nav.querySelector(`.nav-item[data-page="${CSS.escape(want)}"]`);if(b&&isLogged()&&window.YaoWorkspace?.ready()){b.click();history.replaceState(null,'',location.pathname);return true}};if(!go()){const t=setInterval(()=>{if(go())clearInterval(t)},300);setTimeout(()=>clearInterval(t),15000)}}}catch{}
+  // 打勾完成等動作會讓整頁重畫：重畫前記住捲動位置，畫完馬上放回首頁內容並回到原位，不再跳回頂部。
+  let savedScroll=null;
+  const scrollers=()=>[document.scrollingElement,document.querySelector('#system .main'),app].filter(Boolean);
+  function rememberScroll(){if(!savedScroll)savedScroll={page:page(),list:scrollers().map(el=>[el,el.scrollTop])}}
+  function restoreScroll(){if(!savedScroll||savedScroll.page!==page())return;for(const [el,top] of savedScroll.list)if(el.scrollTop!==top)el.scrollTop=top}
+  window.addEventListener('yao:before-render',rememberScroll);
+  window.addEventListener('yao:rendered',()=>{
+    if(isField()&&page()==='dashboard'&&next.dataset.built&&!next.isConnected){app.prepend(next)}
+    restoreScroll();
+  });
   window.addEventListener('yao:before-render',()=>{
     const input=document.getElementById('nextSmartInput');
     restoreInputFocus=Boolean(input&&document.activeElement===input);

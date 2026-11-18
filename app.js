@@ -40,7 +40,7 @@ import {
 import {capturePlan} from './capture-plan.js';
 import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist,frequentThings,noteEditing} from './field-views.js';
 
-import {createAdministration} from "./admin.js?v=20261118-1";
+import {createAdministration} from "./admin.js?v=20261118-2";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 
@@ -2571,7 +2571,7 @@ function renderListPage(data,title) {
         const actions=r.sourceNote
             ?`<button type="button" data-note-inline="${id}">編輯</button><button type="button" data-note-organize="${id}">整理成工作</button><button type="button" data-row-copy="${esc(key)}">複製文字</button>`
             :`<button type="button" onclick="editItem('${id}')">編輯</button><button type="button" onclick="shareItem('${id}')">分享</button><button type="button" class="danger" onclick="deleteItem('${id}')">刪除</button>`;
-        return rowCard(r,{source:r.sourceNote?'note':'item',key,project:getProject(r.projectId)?.name||'',kind:r.sourceNote?(r.captureKind==='task'?'待辦':'隨手記'):r.type,open:fieldListOpen.has(key),expandAttr:'data-row-expand',check:r.sourceNote?`data-note-done="${id}"`:`data-row-done="${id}"`,actions});
+        return rowCard(r,{edit:r.sourceNote?`data-note-inline="${id}"`:`onclick="editItem('${id}')"`,source:r.sourceNote?'note':'item',key,project:getProject(r.projectId)?.name||'',kind:r.sourceNote?(r.captureKind==='task'?'待辦':'隨手記'):r.type,open:fieldListOpen.has(key),expandAttr:'data-row-expand',check:r.sourceNote?`data-note-done="${id}"`:`data-row-done="${id}"`,actions});
     };
     app.innerHTML = fieldList(rows,title,listRow,fieldListFilter,{limit:fieldListLimit});
     const rerender=()=>renderListPage(data,title);

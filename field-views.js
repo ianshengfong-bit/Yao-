@@ -74,7 +74,7 @@ const shortDate = date => date ? date.slice(5).replace('-','/') : '';
 /* 隨手記直接編輯：同一時間只編輯一筆，文字暫存在這裡，重畫畫面也不會不見。 */
 export const noteEditing = {id:'', text:''};
 function noteEditor(r) {
-    return `<article class="field-row is-editing"><div class="field-note-edit"><textarea data-note-edit-text rows="3" maxlength="2000" aria-label="編輯隨手記">${e(noteEditing.text)}</textarea><div class="field-note-edit-actions"><button type="button" data-note-cancel>取消</button><button type="button" class="primary" data-note-save="${e(r.id)}">儲存</button></div></div></article>`;
+    return `<article class="field-row is-editing"><div class="field-note-edit"><textarea data-note-edit-text rows="${Math.min(14,Math.max(3,String(noteEditing.text).split('\n').length+1))}" maxlength="2000" aria-label="編輯隨手記">${e(noteEditing.text)}</textarea><div class="field-note-edit-actions"><button type="button" data-note-cancel>取消</button><button type="button" class="primary" data-note-save="${e(r.id)}">儲存</button></div></div></article>`;
 }
 export function rowCard(r,opts) {
     if (opts.source === 'note' && noteEditing.id && String(r.id) === noteEditing.id) return noteEditor(r);
@@ -84,8 +84,10 @@ export function rowCard(r,opts) {
     const list=opts.source?rowChecklist(r,project):[],ticks=new Set((r.checks||[]).map(Number));
     const ready=list.filter((_,i)=>ticks.has(i)).length;
     const meta=[project,when,kind].filter(Boolean).map(t=>`<span>${e(t)}</span>`).join('')+(list.length?`<span class="field-ready${ready===list.length?' is-all':''}">已備好 ${ready}/${list.length}</span>`:'');
-    const checklist=list.length?`<ul class="field-checklist">${list.map((x,i)=>`<li><button type="button" class="field-tick${ticks.has(i)?' is-on':''}" data-tick="${i}" data-tick-row="${e(opts.source)}:${e(r.id)}" aria-pressed="${ticks.has(i)}"><span aria-hidden="true">${ticks.has(i)?'✓':''}</span>${e(x)}</button></li>`).join('')}</ul>`:'';
-    return `<article class="field-row${r.done?' is-done':''}${late?' is-late':''}${open?' is-open':''}"><button type="button" class="field-check" ${check} aria-label="${r.done?'恢復':'完成'}：${e(r.title)}">${r.done?'✓':''}</button><div class="field-row-body" ${expandAttr}="${e(key)}" role="button" tabindex="0" aria-expanded="${open}"><p class="field-row-title">${e(r.title)}</p><div class="field-row-meta">${meta}${late?`<span class="field-overdue">逾期 ${days} 天</span>`:''}${r.reminderRequest?'<span class="field-row-bell" title="提醒要求已記下；通知尚未設定">⏰</span>':''}</div>${checklist}${open&&actions?`<div class="field-row-actions">${actions}</div>`:''}</div></article>`;
+    // 清單太長時先顯示 5 項，點卡片展開才看全部
+    const shown=open?list:list.slice(0,5),more=list.length-shown.length;
+    const checklist=list.length?`<ul class="field-checklist">${shown.map((x,i)=>`<li><button type="button" class="field-tick${ticks.has(i)?' is-on':''}" data-tick="${i}" data-tick-row="${e(opts.source)}:${e(r.id)}" aria-pressed="${ticks.has(i)}"><span aria-hidden="true">${ticks.has(i)?'✓':''}</span>${e(x)}</button></li>`).join('')}${more?`<li class="field-tick-more">還有 ${more} 項</li>`:''}</ul>`:'';
+    return `<article class="field-row${r.done?' is-done':''}${late?' is-late':''}${open?' is-open':''}"><button type="button" class="field-check" ${check} aria-label="${r.done?'恢復':'完成'}：${e(r.title)}">${r.done?'✓':''}</button><div class="field-row-body" ${expandAttr}="${e(key)}" role="button" tabindex="0" aria-expanded="${open}"><p class="field-row-title">${e(r.title)}</p><div class="field-row-meta">${meta}${late?`<span class="field-overdue">逾期 ${days} 天</span>`:''}${r.reminderRequest?'<span class="field-row-bell" title="提醒要求已記下；通知尚未設定">⏰</span>':''}</div>${checklist}${open&&actions?`<div class="field-row-actions">${actions}</div>`:''}</div>${opts.edit?`<button type="button" class="field-row-edit" ${opts.edit}>編輯</button>`:''}</article>`;
 }
 // 完成後底部出現「復原」5 秒，避免滑錯就找不到。
 let undoTimer=0,undoAction=null;

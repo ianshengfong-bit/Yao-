@@ -39,6 +39,8 @@ export function splitChecklist(text,project = '') {
     const names=[project,...String(project||'').split(/[及與和、/\s-]+/)].filter(n=>n&&n.length>=2).sort((a,b)=>b.length-a.length);
     for(const n of names)if(t.startsWith(n)){t=t.slice(n.length).replace(/^[\s:：,，、-]+/,'');break}
     const parts=t.split(/\s*(?:以及|還有|[、，,；;＋+\n]|\s和\s|\s跟\s)\s*/).map(x=>x.trim().replace(/[*＊xX×]\s*(\d+)\s*$/,' ×$1')).filter(x=>x.length>0);
+    // 第一項常帶著「明天去朴子 帶…」這種前言：只留「帶／載／拿」後面的東西
+    if(parts.length>=2)parts[0]=parts[0].replace(/^(?:.*\s)?(帶|載|拿|準備|買)(?=\S)/,'').trim()||parts[0];
     if(parts.length>=2)for(const n of names)if(parts[0].includes(n)){parts[0]=parts[0].replace(n,'').replace(/\s{2,}/g,' ').trim();break}
     return parts.length>=2&&parts.length<=30&&parts[0]?parts:[];
 }
@@ -69,7 +71,13 @@ export function frequentThings(rows,projectNameOf = () => '',limit = 10,projectN
 }
 const shortDate = date => date ? date.slice(5).replace('-','/') : '';
 /* r: {id,title,done,date,time,reminderRequest}; opts.check 是完成按鈕的屬性字串，opts.actions 是展開後的按鈕 HTML。 */
+/* 隨手記直接編輯：同一時間只編輯一筆，文字暫存在這裡，重畫畫面也不會不見。 */
+export const noteEditing = {id:'', text:''};
+function noteEditor(r) {
+    return `<article class="field-row is-editing"><div class="field-note-edit"><textarea data-note-edit-text rows="3" maxlength="2000" aria-label="編輯隨手記">${e(noteEditing.text)}</textarea><div class="field-note-edit-actions"><button type="button" data-note-cancel>取消</button><button type="button" class="primary" data-note-save="${e(r.id)}">儲存</button></div></div></article>`;
+}
 export function rowCard(r,opts) {
+    if (opts.source === 'note' && noteEditing.id && String(r.id) === noteEditing.id) return noteEditor(r);
     const {key,project = '',kind = '',open = false,check,expandAttr,actions = '',today = localDay()}=opts;
     const late=isLateRow(r,today),when=r.date?shortDate(r.date)+(r.time?' '+r.time:''):'';
     const days=late?Math.round((Date.parse(today)-Date.parse(r.date))/864e5):0;

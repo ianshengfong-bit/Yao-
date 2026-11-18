@@ -38,9 +38,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
 import {capturePlan} from './capture-plan.js';
-import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist,frequentThings} from './field-views.js';
+import {fieldList,projectSummaryCard,rowCard,showUndo,splitChecklist,rowChecklist,frequentThings,noteEditing} from './field-views.js';
 
-import {createAdministration} from "./admin.js?v=20261113-4";
+import {createAdministration} from "./admin.js?v=20261118-1";
 import {createAdminStore} from "./admin-store.js";
 import {reminderMoments, telegramSchedule, validReminderTime} from "./reminder-core.js";
 
@@ -2569,7 +2569,7 @@ function renderListPage(data,title) {
     const listRow=r=>{
         const id=esc(r.id),key=(r.sourceNote?'note:':'item:')+r.id;
         const actions=r.sourceNote
-            ?`<button type="button" data-note-organize="${id}">整理成工作</button><button type="button" data-row-copy="${esc(key)}">複製文字</button>`
+            ?`<button type="button" data-note-inline="${id}">編輯</button><button type="button" data-note-organize="${id}">整理成工作</button><button type="button" data-row-copy="${esc(key)}">複製文字</button>`
             :`<button type="button" onclick="editItem('${id}')">編輯</button><button type="button" onclick="shareItem('${id}')">分享</button><button type="button" class="danger" onclick="deleteItem('${id}')">刪除</button>`;
         return rowCard(r,{source:r.sourceNote?'note':'item',key,project:getProject(r.projectId)?.name||'',kind:r.sourceNote?(r.captureKind==='task'?'待辦':'隨手記'):r.type,open:fieldListOpen.has(key),expandAttr:'data-row-expand',check:r.sourceNote?`data-note-done="${id}"`:`data-row-done="${id}"`,actions});
     };
@@ -7614,6 +7614,43 @@ document.addEventListener('click',event=>{
     const [source,...rest]=String(b.dataset.tickRow||'').split(':');
     toggleChecklistItem(source,rest.join(':'),Number(b.dataset.tick));
 },true);
+// 隨手記直接編輯（首頁、工作紀錄都能用）：改文字就好，不用先轉成工作。
+async function editCaptureNote(id, text) {
+    if (!currentUser) throw new Error('請先登入。');
+    const value = String(text || '').trim();
+    if (!value || value.length > 2000) throw new Error('請輸入 1–2000 字。');
+    const note = inboxNotes.find(n => String(n.id) === String(id));
+    if (!note) throw new Error('找不到這筆隨手記。');
+    // 手動編過的清單保留；從文字自動拆的清單會跟著新文字重拆，勾選狀態重設避免對錯項。
+    const patch = {text:value, updatedAt:Date.now()};
+    if (!Array.isArray(note.checklist) && value !== note.text) patch.checks = [];
+    await quickWrite(updateDoc(doc(db,'users',currentUser.uid,'inboxNotes',String(id)), patch));
+}
+function focusNoteEditor() {
+    requestAnimationFrame(() => { const t = document.querySelector('[data-note-edit-text]'); if (t && document.activeElement !== t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } });
+}
+document.addEventListener('input', event => { if (event.target.matches?.('[data-note-edit-text]')) noteEditing.text = event.target.value; });
+let noteEditorFocused = false;
+window.addEventListener('yao:before-render', () => { noteEditorFocused = Boolean(noteEditing.id && document.activeElement?.matches?.('[data-note-edit-text]')); });
+window.addEventListener('yao:rendered', () => { if (noteEditorFocused) { noteEditorFocused = false; setTimeout(focusNoteEditor, 30); } });
+document.addEventListener('click', async event => {
+    const b = event.target.closest?.('[data-note-inline],[data-note-save],[data-note-cancel]');
+    if (!b) return;
+    event.preventDefault(); event.stopPropagation();
+    if (b.dataset.noteInline) {
+        const note = inboxNotes.find(n => String(n.id) === b.dataset.noteInline);
+        if (!note) return;
+        noteEditing.id = String(note.id); noteEditing.text = note.text || '';
+        render(); focusNoteEditor();
+    } else if (b.hasAttribute('data-note-cancel')) {
+        noteEditing.id = ''; noteEditing.text = ''; render();
+    } else if (b.dataset.noteSave) {
+        b.disabled = true;
+        try { await editCaptureNote(b.dataset.noteSave, noteEditing.text); noteEditing.id = ''; noteEditing.text = ''; toast('已儲存'); render(); }
+        catch (error) { toast(error.message || '儲存失敗'); b.disabled = false; }
+    }
+}, true);
+
 async function toggleCaptureNote(id) {
     if (!currentUser || currentPage === 'administration') return;
     const note=inboxNotes.find(n=>String(n.id)===String(id));

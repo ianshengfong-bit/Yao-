@@ -247,3 +247,13 @@ html:root body .admin-shortcuts button small,
 html:root body .admin-schedule-help,
 html:root body .admin-heading p:empty{display:none!important}
 html:root body .admin-range-description > span:first-child{display:none}
+
+/* 隨手記直接編輯 */
+.field-row.is-editing{display:block;padding:10px 12px}
+.field-note-edit{display:grid;gap:8px}
+.field-note-edit textarea{width:100%;min-height:84px;padding:10px 12px;border:1px solid var(--t-accent);border-radius:10px;background:var(--t-surface);color:var(--t-ink);font:inherit;font-size:16px;line-height:1.5;resize:vertical;box-sizing:border-box}
+.field-note-edit-actions{display:flex;justify-content:flex-end;gap:8px}
+.field-note-edit-actions button{min-height:40px;padding:0 16px;border:1px solid var(--t-line);border-radius:10px;background:var(--t-raised);color:var(--t-ink);font:inherit;font-size:14px;cursor:pointer}
+.field-note-edit-actions button.primary{background:var(--t-accent);border-color:var(--t-accent);color:var(--t-on-accent);font-weight:600}
+html:root body .field-row.is-editing{display:block!important;padding:10px 12px!important}
+html:root body .field-row.is-editing .field-note-edit{width:100%}
